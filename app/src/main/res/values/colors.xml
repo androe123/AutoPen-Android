@@ -1,0 +1,6 @@
+<resources>
+    <color name="bg_app">#0C0E1A</color>
+    <color name="bg_panel">#111424</color>
+    <color name="icon_bg_start">#6366F1</color>
+    <color name="icon_bg_end">#8B5CF6</color>
+</resources>

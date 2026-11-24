@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>АвтоРучка</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="stylesheet" href="fonts.css">
+<script src="android-bridge.js"></script>
+<script src="jspdf.umd.min.js" defer></script>
+<style>
+  :root {
+    --bg-app: #0c0e1a;
+    --bg-panel: #111424;
+    --bg-card: #171b2e;
+    --bg-card-hover: #1d2239;
+    --bg-pill: #232842;
+    --border: #252b47;
+    --border-strong: #343d63;
+    --text: #f1f5f9;
+    --text-muted: #8b93b3;
+    --accent: #6366f1;
+    --accent-hover: #5255e6;
+    --accent-edge: #3e41b8;
+    --accent-soft: rgba(99, 102, 241, 0.16);
+    --green: #16a34a;
+    --green-bright: #22c55e;
+    --green-edge: #117335;
+    --green-soft: rgba(34, 197, 94, 0.16);
+    --green-border: rgba(34, 197, 94, 0.45);
+    --amber: #f59e0b;
+    --amber-edge: #b47306;
+    --amber-soft: rgba(245, 158, 11, 0.15);
+    --amber-border: rgba(245, 158, 11, 0.4);
+    --red: #ef4444;
+    --red-soft: rgba(239, 68, 68, 0.14);
+    --shadow-card: 0 2px 10px rgba(4, 6, 15, 0.28);
+  }
+
+  [data-theme="light"] {
+    --bg-app: #eef1f8;
+    --bg-panel: #f7f9fd;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8faff;
+    --bg-pill: #eef2ff;
+    --border: #dce2f0;
+    --border-strong: #c4cde3;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --accent-edge: #312a9e;
+    --accent-soft: rgba(79, 70, 229, 0.1);
+    --green: #15803d;
+    --green-bright: #16a34a;
+    --green-edge: #0f5c2c;
+    --green-soft: rgba(21, 128, 61, 0.12);
+    --green-border: rgba(21, 128, 61, 0.35);
+    --amber: #d97706;
+    --amber-edge: #9a5304;
+    --amber-soft: rgba(217, 119, 6, 0.12);
+    --amber-border: rgba(217, 119, 6, 0.35);
+    --red: #dc2626;
+    --red-soft: rgba(220, 38, 38, 0.1);
+    --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg-app);
+    color: var(--text);
+    overflow: hidden;
+    transition: background-color .18s ease, color .18s ease;
+  }
+
+  .shell { display: flex; flex-direction: column; height: 100vh; }
+
+  .topbar {
+    height: 54px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .brand-logo {
+    width: 28px; height: 28px; border-radius: 7px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    display: grid; place-items: center; font-size: 14px;
+  }
+  .ver-badge {
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 5px;
+    background: var(--bg-pill); color: var(--text-muted); border: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .top-tabs { display: flex; align-items: center; gap: 6px; }
+  .top-tab {
+    position: relative;
+    padding: 7px 12px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: color .14s ease, background-color .14s ease, border-color .14s ease, transform .08s ease;
+  }
+  .top-tab:active { transform: translateY(1px); }
+  .top-tab.active {
+    background: var(--bg-card);
+    color: var(--text);
+    border-color: var(--border-strong);
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .tab-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--amber);
+    display: none;
+  }
+  .tab-dot.show { display: inline-block; }
+
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    padding: 6px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color .14s ease, background-color .14s ease, transform .08s ease;
+  }
+  .icon-btn:active { transform: translateY(1px); border-bottom-width: 1px; }
+
+  @media (hover: hover) {
+    .top-tab:hover { color: var(--text); background: var(--bg-card-hover); }
+    .icon-btn:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+  }
+
+  .update-banner {
+    display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    background: var(--amber-soft); border-bottom: 1px solid var(--amber-border);
+    padding: 8px 18px; font-size: 12.5px; font-weight: 600; color: var(--text);
+  }
+  .update-banner.show { display: flex; }
+
+  .workspace { display: grid; grid-template-columns: 242px 1fr; flex: 1; min-height: 0; }
+
+  .sidebar {
+    background: var(--bg-panel); border-right: 1px solid var(--border);
+    padding: 14px 10px; display: flex; flex-direction: column; justify-content: space-between;
+    gap: 12px; overflow-y: auto;
+  }
+  .sidebar-label {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); padding: 4px 10px 8px;
+  }
+  .nav-list { display: flex; flex-direction: column; gap: 3px; }
+  .nav-item {
+    width: 100%; background: transparent; color: var(--text-muted);
+    border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
+    font-size: 13px; font-weight: 600; cursor: pointer; display: flex;
+    align-items: center; justify-content: space-between; gap: 8px; text-align: left;
+    transition: background-color .14s ease, color .14s ease, border-color .14s ease, transform .08s ease;
+  }
+  .nav-item:active { transform: translateY(1px); }
+  .nav-item.active {
+    background: var(--bg-card);
+    color: var(--text);
+    border-color: var(--border-strong);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .nav-left { display: flex; align-items: center; gap: 9px; }
+  .nav-count {
+    font-size: 11px; font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-item.active .nav-count { color: var(--text); font-weight: 700; }
+
+  @media (hover: hover) {
+    .nav-item:hover { background: var(--bg-card); color: var(--text); }
+  }
+
+  .sidebar-footer { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+  .save-cta {
+    width: 100%;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--green);
+    color: #ffffff;
+    border: 1px solid var(--green-edge);
+    border-bottom-width: 3px;
+    transition: background-color .14s ease, transform .08s ease;
+  }
+  .save-cta:active { transform: translateY(2px); border-bottom-width: 1px; }
+  .save-cta.dirty-pulse {
+    outline: 2px solid var(--green-bright);
+    outline-offset: 2px;
+  }
+
+  .action-tile.reset {
+    width: 100%;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    transition: background-color .14s ease, color .14s ease, border-color .14s ease, transform .08s ease;
+  }
+  .action-tile.reset:active { transform: translateY(1px); border-bottom-width: 1px; }
+
+  @media (hover: hover) {
+    .save-cta:hover { background: var(--green-bright); color: #051b0d; }
+    .action-tile.reset:hover { background: var(--red-soft); color: var(--red); border-color: rgba(239, 68, 68, 0.4); }
+  }
+
+  .main-pane { overflow-y: auto; padding: 20px 24px 44px; }
+  .pane-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .pane-header h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+  .pane-header p { margin: 3px 0 0; font-size: 13px; color: var(--text-muted); }
+
+  .primary-pill-btn {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: background-color .14s ease, border-color .14s ease, transform .08s ease;
+  }
+  .primary-pill-btn:active { transform: translateY(1px); border-bottom-width: 1px; }
+  @media (hover: hover) {
+    .primary-pill-btn:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+  }
+
+  .cards-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 14px; margin-bottom: 24px;
+  }
+  .tool-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px;
+  }
+  .tool-card.wide { grid-column: 1 / -1; }
+
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .card-head-left { display: flex; flex-direction: column; gap: 2px; }
+  .card-title-txt { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .card-sub-txt { font-size: 12px; color: var(--text-muted); }
+
+  label.lbl {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 4px 0 2px;
+  }
+  .val {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  textarea {
+    width: 100%; min-height: 145px; height: 155px; resize: vertical;
+    font-size: 13.5px; line-height: 1.55; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg-app); color: var(--text);
+    transition: border-color .14s ease;
+  }
+  select, input[type=text] {
+    width: 100%; padding: 8px 10px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--bg-app); color: var(--text);
+    transition: border-color .14s ease;
+  }
+  textarea:focus, select:focus, input[type=text]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input[type=color] {
+    width: 100%; height: 36px; padding: 3px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--bg-app); cursor: pointer;
+  }
+
+  /* Тактильные ползунки */
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+    margin: 1px 0 3px;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text);
+    border: 2.5px solid var(--accent);
+    margin-top: -6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: transform .1s ease, background-color .12s ease;
+  }
+  input[type=range]:active::-webkit-slider-thumb {
+    transform: scale(1.18);
+    background: var(--accent);
+    border-color: #fff;
+  }
+  input[type=range]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text);
+    border: 2.5px solid var(--accent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    transition: transform .1s ease;
+  }
+  input[type=range]:active::-moz-range-thumb {
+    transform: scale(1.18);
+    background: var(--accent);
+    border-color: #fff;
+  }
+
+  .check-row {
+    display: flex; align-items: center; gap: 9px; margin-top: 4px;
+    padding: 4px 0;
+  }
+  .check-row input[type=checkbox] {
+    width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; margin: 0;
+  }
+  .check-row label { font-size: 12.5px; color: var(--text); cursor: pointer; user-select: none; }
+
+  /* Физические кнопки */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  button.s-btn, label.s-btn, a.s-btn {
+    background: var(--bg-pill);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    user-select: none;
+    transition: background-color .12s ease, border-color .12s ease, transform .08s ease;
+  }
+  button.s-btn:active, label.s-btn:active, a.s-btn:active {
+    transform: translateY(1px);
+    border-bottom-width: 1px;
+  }
+
+  button.s-btn.accent, label.s-btn.accent, a.s-btn.accent {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-edge);
+  }
+
+  button.s-btn.green {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green-edge);
+    font-weight: 700;
+    padding: 8px 15px;
+  }
+
+  button.s-btn.amber {
+    background: var(--amber);
+    color: #0c0e1a;
+    border-color: var(--amber-edge);
+    font-weight: 700;
+  }
+
+  @media (hover: hover) {
+    button.s-btn:hover, label.s-btn:hover, a.s-btn:hover {
+      border-color: var(--accent);
+      background: var(--bg-card-hover);
+    }
+    button.s-btn.accent:hover, label.s-btn.accent:hover, a.s-btn.accent:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-edge);
+    }
+    button.s-btn.green:hover {
+      background: var(--green-bright);
+      color: #051b0d;
+    }
+  }
+  label.s-btn input { display: none; }
+
+  .slot-title { font-size: 11.5px; font-weight: 700; color: var(--text-muted); margin: 6px 0 4px; }
+  .photos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .thumb {
+    position: relative; width: 68px; height: 92px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: var(--bg-pill) center/cover no-repeat; cursor: pointer; overflow: hidden;
+    transition: border-color .14s ease, transform .08s ease;
+  }
+  .thumb:active { transform: scale(0.97); }
+  .thumb.active { border-color: var(--accent); outline: 1.5px solid var(--accent); }
+  .thumb span {
+    position: absolute; bottom: 0; left: 0; right: 0; background: rgba(12, 14, 26, 0.82);
+    color: #fff; font-size: 10px; padding: 2px 4px; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb b {
+    position: absolute; top: 3px; right: 3px; background: var(--red); color: #fff;
+    width: 17px; height: 17px; border-radius: 5px; text-align: center; line-height: 17px; font-size: 11px;
+  }
+
+  /* Цельный переключатель режимов сетки */
+  .seg-group {
+    display: inline-flex;
+    padding: 3px;
+    gap: 3px;
+    border: 1px solid var(--border-strong);
+    border-radius: 9px;
+    background: var(--bg-app);
+  }
+  .seg-group button {
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color .14s ease, color .14s ease, border-color .14s ease, transform .08s ease;
+  }
+  .seg-group button:active { transform: scale(0.97); }
+  .seg-group button.active,
+  .seg-group button.active.off-mode {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent-edge);
+  }
+  @media (hover: hover) {
+    .seg-group button:not(.active):hover {
+      color: var(--text);
+      background: var(--bg-card);
+    }
+  }
+
+  .pages-stream { display: flex; flex-direction: column; gap: 20px; }
+  .page-card {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; max-width: 780px; width: 100%; margin: 0 auto; box-shadow: var(--shadow-card);
+  }
+  .page-card.selected-card { outline: 2px solid var(--accent); }
+
+  .canvas-wrap { position: relative; width: 100%; user-select: none; touch-action: none; background: #fff; }
+  .page-card canvas { width: 100%; display: block; }
+
+  .crop-box {
+    position: absolute; border: 2px solid #ef4444; background: rgba(99, 102, 241, 0.08);
+    cursor: move; z-index: 2; touch-action: none;
+  }
+  .crop-box .handle {
+    position: absolute; width: 14px; height: 14px; background: #fff;
+    border: 2px solid #ef4444; border-radius: 3px; z-index: 3; touch-action: none;
+    transition: transform .1s ease;
+  }
+  .crop-box .handle:active { transform: scale(1.25); background: #ef4444; }
+  .crop-box .handle.nw { top: -7px; left: -7px; cursor: nwse-resize; }
+  .crop-box .handle.ne { top: -7px; right: -7px; cursor: nesw-resize; }
+  .crop-box .handle.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+  .crop-box .handle.se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+  .crop-box .handle.n  { top: -7px; left: 50%; margin-left: -7px; cursor: ns-resize; }
+  .crop-box .handle.s  { bottom: -7px; left: 50%; margin-left: -7px; cursor: ns-resize; }
+  .crop-box .handle.w  { left: -7px; top: 50%; margin-top: -7px; cursor: ew-resize; }
+  .crop-box .handle.e  { right: -7px; top: 50%; margin-top: -7px; cursor: ew-resize; }
+
+  .mesh-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+  .mesh-overlay line.drag-line { pointer-events: stroke; cursor: move; }
+  .mesh-node {
+    position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+    border-radius: 50%; background: #ef4444; border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.45); cursor: grab; pointer-events: auto; z-index: 3; touch-action: none;
+    transition: transform .1s ease;
+  }
+  .mesh-node:active { transform: scale(1.3); cursor: grabbing; }
+  .mesh-node.move-all { background: #6366f1; width: 18px; height: 18px; margin: -9px 0 0 -9px; cursor: move; }
+
+  .page-bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    flex-wrap: wrap; padding: 10px 14px; font-size: 12.5px;
+    background: var(--bg-card); border-top: 1px solid var(--border);
+  }
+  .page-bar-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .section-banner { max-width: 780px; width: 100%; margin: 4px auto 0; font-size: 13.5px; font-weight: 700; color: var(--text-muted); }
+
+  .bottom-save-box {
+    max-width: 780px; width: 100%; margin: 12px auto 0; padding: 12px 16px;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .hint-txt { font-size: 12px; color: var(--text-muted); }
+
+  .changelog-box {
+    background: var(--bg-app); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; font-size: 12.5px; line-height: 1.5; color: var(--text-muted);
+  }
+
+  .update-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(5, 8, 20, 0.72);
+    display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px;
+  }
+  .update-modal-backdrop.show { display: flex; }
+  .update-modal {
+    width: 100%; max-width: 440px; background: var(--bg-card); border: 1px solid var(--border-strong);
+    border-radius: 12px; padding: 20px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .update-modal h3 { margin: 0; font-size: 18px; }
+  .update-modal p { margin: 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.5; }
+
+  #toast {
+    position: fixed; right: 18px; bottom: 18px; max-width: 390px;
+    background: var(--bg-card); color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-left: 4px solid var(--green-bright);
+    padding: 10px 14px;
+    border-radius: 9px; font-size: 12.5px; font-weight: 600; line-height: 1.35;
+    opacity: 0; transform: translateY(8px); transition: opacity .2s ease, transform .2s ease;
+    pointer-events: none; z-index: 999; box-shadow: 0 8px 20px rgba(4, 6, 15, 0.45);
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+</style>
+<link rel="stylesheet" href="mobile.css">
+</head>
+<body>
+<div class="shell">
+  <div class="update-banner" id="updateBanner">
+    <span id="updateBannerText">Доступно обновление на GitHub.</span>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button type="button" class="s-btn amber" id="openUpdateModalFromBannerBtn">Открыть окно обновления</button>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">✍️</div>
+      <span>АвтоРучка</span>
+      <span class="ver-badge" id="appVersionBadge">v1.2.0</span>
+    </div>
+
+    <div class="top-tabs">
+      <button type="button" class="top-tab active" id="tabPreview">Превью листов</button>
+      <button type="button" class="top-tab" id="tabCalib">Границы и сетка</button>
+      <button type="button" class="top-tab" id="tabUpdates">
+        <span>Обновления</span>
+        <span class="tab-dot" id="updateTabDot"></span>
+      </button>
+    </div>
+
+    <div class="top-actions">
+      <button type="button" class="icon-btn" id="themeToggle">☀️ Светлая</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-label">Разделы</div>
+        <div class="nav-list">
+          <button type="button" class="nav-item active" data-section="all">
+            <span class="nav-left"><span>⊞</span><span>Все блоки</span></span>
+            <span class="nav-count">4</span>
+          </button>
+          <button type="button" class="nav-item" data-section="text">
+            <span class="nav-left"><span>📝</span><span>Текст</span></span>
+            <span class="nav-count">1</span>
+          </button>
+          <button type="button" class="nav-item" data-section="handwriting">
+            <span class="nav-left"><span>🖋️</span><span>Почерк и чернила</span></span>
+            <span class="nav-count">2</span>
+          </button>
+          <button type="button" class="nav-item" data-section="sheets">
+            <span class="nav-left"><span>📄</span><span>Листы и рамки</span></span>
+            <span class="nav-count">2</span>
+          </button>
+          <button type="button" class="nav-item" data-section="export">
+            <span class="nav-left"><span>📦</span><span>Экспорт</span></span>
+            <span class="nav-count">1</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button type="button" class="save-cta" id="btnSave">💾 Сохранить</button>
+        <button type="button" class="action-tile reset" id="resetAll">↺ Сбросить настройки</button>
+      </div>
+    </aside>
+
+    <main class="main-pane" id="mainPane">
+      <div class="pane-header">
+        <div>
+          <h2 id="paneTitle">Превью конспекта</h2>
+          <p id="paneSubtitle">Настраивайте параметры и скачивайте готовые листы в PDF или PNG</p>
+        </div>
+        <button type="button" class="primary-pill-btn" id="fixTextBtn">✨ Исправить ошибки и абзацы</button>
+      </div>
+
+      <div class="cards-grid" id="cardsGrid">
+        <div class="tool-card wide" data-group="text">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Текст конспекта</div>
+              <div class="card-sub-txt">Автоперенос по страницам, пустая строка = новый абзац</div>
+            </div>
+          </div>
+          <textarea id="textInput" placeholder="Введите или вставьте текст конспекта..."></textarea>
+        </div>
+
+        <div class="tool-card" data-group="handwriting">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Почерк и наклон</div>
+              <div class="card-sub-txt">Шрифт, размер, интервалы и неровность строк</div>
+            </div>
+          </div>
+
+          <label class="lbl" for="font">Шрифт</label>
+          <select id="font">
+            <option value="Caveat">Caveat</option>
+            <option value="Marck Script">Marck Script</option>
+            <option value="Bad Script">Bad Script</option>
+            <option value="Neucha">Neucha</option>
+            <option value="Kelly Slab">Kelly Slab</option>
+            <option value="Pacifico">Pacifico</option>
+            <option value="Lobster">Lobster</option>
+            <option value="Comforter">Comforter</option>
+            <option value="Shantell Sans">Shantell Sans</option>
+            <option value="Amatic SC">Amatic SC</option>
+          </select>
+
+          <div class="btn-row">
+            <label class="s-btn" style="flex:1">Загрузить свой .ttf / .otf
+              <input type="file" id="fontFile" accept=".ttf,.otf,font/ttf,font/otf">
+            </label>
+          </div>
+
+          <label class="lbl">Размер шрифта <span class="val" id="v-fontSize"></span></label>
+          <input type="range" id="fontSize" min="14" max="60" step="1">
+
+          <label class="lbl">Межбуквенный интервал <span class="val" id="v-spacing"></span></label>
+          <input type="range" id="spacing" min="-2" max="8" step="0.1">
+
+          <label class="lbl">Неровность строк <span class="val" id="v-distortion"></span></label>
+          <input type="range" id="distortion" min="0" max="10" step="0.1">
+
+          <label class="lbl">Отступ абзаца <span class="val" id="v-indent"></span></label>
+          <input type="range" id="indent" min="0" max="150" step="1">
+        </div>
+
+        <div class="tool-card" data-group="handwriting">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Цвет и прозрачность чернил</div>
+              <div class="card-sub-txt">Оттенок ручки, прозрачность и смешивание</div>
+            </div>
+          </div>
+
+          <label class="lbl" for="ink">Пресет цвета</label>
+          <select id="ink">
+            <option value="#1f3fbf">Синяя шариковая</option>
+            <option value="#0a1f7a">Гелевая (тёмно-синяя)</option>
+            <option value="#1a1a1a">Чёрная</option>
+            <option value="#5b2a86">Фиолетовая</option>
+          </select>
+
+          <label class="lbl" for="inkCustom">Точный цвет</label>
+          <input type="color" id="inkCustom" value="#1f3fbf">
+
+          <label class="lbl">Прозрачность <span class="val" id="v-opacity"></span></label>
+          <input type="range" id="opacity" min="0.2" max="1" step="0.01">
+
+          <div class="check-row">
+            <input type="checkbox" id="multiply">
+            <label for="multiply">Режим Multiply (чернила впитываются в лист)</label>
+          </div>
+        </div>
+
+        <div class="tool-card" data-group="sheets">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Фотографии страниц</div>
+              <div class="card-sub-txt">Левые и правые листы тетради</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <label class="s-btn accent" style="flex:1">＋ Левые фото
+              <input type="file" id="filesLeft" accept="image/*" multiple>
+            </label>
+            <label class="s-btn accent" style="flex:1">＋ Правые фото
+              <input type="file" id="filesRight" accept="image/*" multiple>
+            </label>
+          </div>
+
+          <div class="check-row">
+            <input type="checkbox" id="alternate" checked>
+            <label for="alternate">Чередовать страницы (начиная с левой)</label>
+          </div>
+
+          <div class="slot-title">Левые страницы (1, 3, 5...)</div>
+          <div class="photos" id="photosLeft"></div>
+
+          <div class="slot-title">Правые страницы (2, 4, 6...)</div>
+          <div class="photos" id="photosRight"></div>
+        </div>
+
+        <div class="tool-card" data-group="sheets">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Границы и сетка листа</div>
+              <div class="card-sub-txt" id="selectedPhotoHint">Лист: по умолчанию</div>
+            </div>
+          </div>
+
+          <label class="lbl">Тип сетки</label>
+          <div class="seg-group" id="panelWarpSeg" style="width:100%">
+            <button type="button" data-mode="off" style="flex:1">Рамка</button>
+            <button type="button" data-mode="3" style="flex:1">3×3</button>
+            <button type="button" data-mode="4" style="flex:1">4×4</button>
+          </div>
+
+          <label class="lbl">Высота строки <span class="val" id="v-cLine"></span></label>
+          <input type="range" id="cLine" min="16" max="90" step="0.5">
+
+          <div class="btn-row">
+            <button type="button" class="s-btn" id="resetPhotoMesh" style="flex:1">↺ Сбросить лист</button>
+            <button type="button" class="s-btn" id="copyToSameSide" style="flex:1">На все этой стороны</button>
+          </div>
+        </div>
+
+        <div class="tool-card wide" data-group="export">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-title-txt">Сохранение файла</div>
+              <div class="card-sub-txt">Единый PDF-файл или отдельные PNG-изображения страниц</div>
+            </div>
+            <div class="btn-row" style="margin:0">
+              <button type="button" class="s-btn accent" id="btnPdf">Скачать PDF</button>
+              <button type="button" class="s-btn" id="downloadAll">Все страницы (PNG)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pages-stream" id="preview"></div>
+    </main>
+  </div>
+</div>
+
+<div class="update-modal-backdrop" id="updateModal">
+  <div class="update-modal">
+    <h3 id="updateModalTitle">Обновление приложения</h3>
+    <p id="updateModalDesc">Найдена новая версия на GitHub. Перейдите в репозиторий, чтобы обновиться.</p>
+    <div id="updateModalVersionInfo" style="font-size:12.5px;font-weight:700;"></div>
+    <div class="btn-row" style="justify-content:flex-end;margin-top:8px">
+      <button type="button" class="s-btn" id="closeUpdateModalBtn">Закрыть</button>
+      <a class="s-btn accent" id="githubReleaseLink" href="https://github.com/" target="_blank" rel="noopener noreferrer">
+        Перейти на GitHub
+      </a>
+    </div>
+  </div>
+</div>
+
+<div id="toast">Обновление актуально</div>
+
+<script>
+const GITHUB_REPO_URL = 'https://github.com/androe123/AutoPen-Android';
+const REMOTE_MANIFEST_URL = 'https://raw.githubusercontent.com/androe123/AutoPen-Android/main/version.json';
+const AVAILABLE_VERSIONS = ['v1.2.0', 'v1.2.1', 'v1.3.0'];
+
+let APP_VERSION = localStorage.getItem('hw_selected_version') || 'v1.2.2';
+
+let updateStatus = {
+  hasUpdate: false,
+  latestVersion: APP_VERSION,
+  releaseUrl: `${GITHUB_REPO_URL}/releases`,
+  notes: 'Нажмите «Обновления», чтобы проверить наличие новой версии на GitHub.',
+  checkedAt: new Date().toLocaleTimeString()
+};
+
+const $ = id => document.getElementById(id);
+
+function waitForPywebviewApi(timeoutMs = 3000) {
+  if (window.pywebview && window.pywebview.api) {
+    return Promise.resolve(window.pywebview.api);
+  }
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve(window.pywebview && window.pywebview.api ? window.pywebview.api : null);
+    };
+    window.addEventListener('pywebviewready', finish, { once: true });
+    const poll = setInterval(() => {
+      if (window.pywebview && window.pywebview.api) {
+        clearInterval(poll);
+        finish();
+      }
+    }, 50);
+    setTimeout(() => {
+      clearInterval(poll);
+      finish();
+    }, timeoutMs);
+  });
+}
+
+function openUpdateDialog({ found, version, notes, url }) {
+  const modal = $('updateModal');
+  $('githubReleaseLink').href = url || `${GITHUB_REPO_URL}/releases`;
+
+  if (found) {
+    $('updateModalTitle').textContent = `Доступно обновление (${version})`;
+    $('updateModalDesc').textContent = notes || 'На GitHub выложена новая версия. Перейдите в репозиторий и обновите приложение.';
+    $('updateModalVersionInfo').textContent = `Текущая версия: ${APP_VERSION} → Новая версия: ${version}`;
+    updateStatus.hasUpdate = true;
+    updateStatus.latestVersion = version;
+    updateStatus.releaseUrl = url || `${GITHUB_REPO_URL}/releases`;
+  } else {
+    $('updateModalTitle').textContent = 'Обновление актуально';
+    $('updateModalDesc').textContent = `Установлена актуальная версия ${APP_VERSION}. Вы можете открыть GitHub, чтобы посмотреть релизы.`;
+    $('updateModalVersionInfo').textContent = `Текущая версия: ${APP_VERSION}`;
+    updateStatus.hasUpdate = false;
+    updateStatus.latestVersion = APP_VERSION;
+  }
+
+  syncUpdateUI();
+  modal.classList.add('show');
+}
+
+function syncUpdateUI() {
+  $('appVersionBadge').textContent = APP_VERSION;
+  $('updateTabDot').classList.toggle('show', !!updateStatus.hasUpdate);
+  $('updateBanner').classList.toggle('show', !!updateStatus.hasUpdate);
+  if (updateStatus.hasUpdate) {
+    $('updateBannerText').textContent = `Доступно обновление ${updateStatus.latestVersion} на GitHub.`;
+  }
+}
+
+async function checkForCodeUpdates(showDialogIfFound = true) {
+  updateStatus.checkedAt = new Date().toLocaleTimeString();
+  let found = false;
+  let remoteVer = APP_VERSION;
+  let remoteUrl = `${GITHUB_REPO_URL}/releases`;
+  let remoteNotes = 'Установлена актуальная версия приложения.';
+
+  if (REMOTE_MANIFEST_URL && !REMOTE_MANIFEST_URL.includes('ВАШ_НИК')) {
+    try {
+      const res = await fetch(`${REMOTE_MANIFEST_URL}?t=${Date.now()}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.version && data.version !== APP_VERSION) {
+          found = true;
+          remoteVer = data.version;
+          remoteUrl = data.url || `${GITHUB_REPO_URL}/releases`;
+          remoteNotes = data.notes || 'Доступна новая версия на GitHub.';
+        }
+      }
+    } catch (e) {}
+  }
+
+  updateStatus.hasUpdate = found;
+  updateStatus.latestVersion = remoteVer;
+  updateStatus.releaseUrl = remoteUrl;
+  updateStatus.notes = remoteNotes;
+  syncUpdateUI();
+
+  if (found && showDialogIfFound) {
+    openUpdateDialog({ found: true, version: remoteVer, notes: remoteNotes, url: remoteUrl });
+  } else {
+    showCornerNotice('Обновление актуально', false);
+  }
+
+  if (state.viewMode === 'updates') renderView();
+}
+
+const DEFAULT_TEXT = '';
+const DEFAULT_BASE = { left: 10, top: 16, right: 10, bottom: 10, line: 32 };
+const STORAGE_KEY = 'hw_perpage_mesh_v7';
+const BACKUP_KEY = 'hw_perpage_mesh_backup';
+
+function createFlatMesh(n, base = DEFAULT_BASE) {
+  const pts = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const u = c / (n - 1);
+      const v = r / (n - 1);
+      const xPct = base.left + u * (100 - base.left - base.right);
+      const yPct = base.top + v * (100 - base.top - base.bottom);
+      pts.push({ x: +xPct.toFixed(2), y: +yPct.toFixed(2) });
+    }
+  }
+  return pts;
+}
+
+function syncMeshToBase(mesh, n, base) {
+  if (!Array.isArray(mesh) || mesh.length !== n * n) return createFlatMesh(n, base);
+  const oldMinX = Math.min(...mesh.map(p => p.x));
+  const oldMaxX = Math.max(...mesh.map(p => p.x));
+  const oldMinY = Math.min(...mesh.map(p => p.y));
+  const oldMaxY = Math.max(...mesh.map(p => p.y));
+  const oldW = Math.max(0.001, oldMaxX - oldMinX);
+  const oldH = Math.max(0.001, oldMaxY - oldMinY);
+
+  const newMinX = base.left;
+  const newMaxX = 100 - base.right;
+  const newMinY = base.top;
+  const newMaxY = 100 - base.bottom;
+  const newW = Math.max(2, newMaxX - newMinX);
+  const newH = Math.max(2, newMaxY - newMinY);
+
+  return mesh.map(p => {
+    const nx = newMinX + ((p.x - oldMinX) / oldW) * newW;
+    const ny = newMinY + ((p.y - oldMinY) / oldH) * newH;
+    return {
+      x: +Math.max(0, Math.min(100, nx)).toFixed(2),
+      y: +Math.max(0, Math.min(100, ny)).toFixed(2)
+    };
+  });
+}
+
+const DEFAULT_STATE = {
+  schemaVersion: 2,
+  text: DEFAULT_TEXT,
+  font: 'Caveat',
+  fontSize: 30,
+  spacing: 0.5,
+  distortion: 3,
+  indent: 24,
+  ink: '#1f3fbf',
+  opacity: 0.9,
+  multiply: true,
+  alternate: true,
+  theme: 'dark',
+  viewMode: 'preview',
+  activeId: null,
+  photoConfigs: {},
+  customFontName: ''
+};
+
+function normalizePhotoConfig(cfg) {
+  const base = Object.assign({}, DEFAULT_BASE, cfg?.base || {});
+  const warpMode = (cfg?.warpMode === '3' || cfg?.warpMode === '4') ? cfg.warpMode : 'off';
+  const mesh3 = (Array.isArray(cfg?.mesh3) && cfg.mesh3.length === 9) ? cfg.mesh3 : createFlatMesh(3, base);
+  const mesh4 = (Array.isArray(cfg?.mesh4) && cfg.mesh4.length === 16) ? cfg.mesh4 : createFlatMesh(4, base);
+  return { base, warpMode, mesh3, mesh4 };
+}
+
+function hydrateState(raw) {
+  const base = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  if (!raw || typeof raw !== 'object') return base;
+  const merged = Object.assign(base, raw);
+  merged.schemaVersion = 2;
+  if (typeof merged.text !== 'string') merged.text = DEFAULT_TEXT;
+  if (!['preview', 'calib', 'updates'].includes(merged.viewMode)) merged.viewMode = 'preview';
+  const cleanConfigs = {};
+  if (merged.photoConfigs && typeof merged.photoConfigs === 'object') {
+    Object.keys(merged.photoConfigs).forEach(k => {
+      cleanConfigs[k] = normalizePhotoConfig(merged.photoConfigs[k]);
+    });
+  }
+  merged.photoConfigs = cleanConfigs;
+  return merged;
+}
+
+let state = hydrateState(null);
+const photosLeft = [];
+const photosRight = [];
+let hasUnsavedChanges = false;
+
+let db;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('handwriting-merged-db', 1);
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('meta'))   d.createObjectStore('meta',   { keyPath: 'key' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbPut(store, value) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(value);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+function idbGet(store, key) {
+  return new Promise((res, rej) => {
+    const r = db.transaction(store).objectStore(store).get(key);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+function idbGetAll(store) {
+  return new Promise((res, rej) => {
+    const r = db.transaction(store).objectStore(store).getAll();
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+function idbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  });
+}
+
+let toastTimer;
+function showCornerNotice(msg, sticky = false) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  if (!sticky) {
+    toastTimer = setTimeout(() => {
+      if (hasUnsavedChanges) {
+        t.textContent = '⚠ Изменения могут быть не применены, если не нажать «Сохранить»';
+        t.classList.add('show');
+      } else {
+        t.classList.remove('show');
+      }
+    }, 1800);
+  }
+}
+
+function markDirty() {
+  hasUnsavedChanges = true;
+  const btn = $('btnSave');
+  if (btn) btn.classList.add('dirty-pulse');
+  showCornerNotice('⚠ Изменения могут быть не применены, если не нажать «Сохранить»', true);
+}
+
+async function saveNow() {
+  const payload = hydrateState(state);
+  const serialized = JSON.stringify(payload);
+  const parsed = JSON.parse(serialized);
+
+  try {
+    localStorage.setItem(STORAGE_KEY, serialized);
+    localStorage.setItem(BACKUP_KEY, serialized);
+  } catch (e) {}
+
+  if (db) {
+    try {
+      await idbPut('meta', { key: 'perpage_mesh_v7', value: parsed });
+      await idbPut('meta', { key: 'perpage_mesh_backup', value: parsed });
+    } catch (e) {}
+  }
+
+  let savedToDisk = false;
+  const api = await waitForPywebviewApi(2500);
+  if (api && typeof api.save_settings === 'function') {
+    try {
+      savedToDisk = !!(await api.save_settings(parsed));
+    } catch (e) {}
+  }
+
+  if (api && typeof api.save_photos === 'function') {
+    try {
+      const toDataUrl = blob => new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.readAsDataURL(blob);
+      });
+      const serializedPhotos = [];
+      for (const p of [...photosLeft, ...photosRight]) {
+        serializedPhotos.push({
+          id: p.id,
+          side: p.side,
+          name: p.name,
+          dataUrl: await toDataUrl(p.blob)
+        });
+      }
+      await api.save_photos(serializedPhotos);
+    } catch (e) {}
+  }
+
+  hasUnsavedChanges = false;
+  const btn = $('btnSave');
+  if (btn) btn.classList.remove('dirty-pulse');
+  showCornerNotice(savedToDisk ? 'Сохранено на диск ✔' : 'Сохранено ✔', false);
+}
+
+async function loadSettings() {
+  let saved = null;
+
+  const api = await waitForPywebviewApi(3000);
+  if (api && typeof api.load_settings === 'function') {
+    try {
+      const desktopSaved = await api.load_settings();
+      if (desktopSaved && typeof desktopSaved === 'object') {
+        saved = desktopSaved;
+      }
+    } catch (e) {}
+  }
+
+  for (const key of [STORAGE_KEY, BACKUP_KEY]) {
+    if (saved) break;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) saved = JSON.parse(raw);
+    } catch (e) {}
+  }
+
+  if (!saved && db) {
+    for (const metaKey of ['perpage_mesh_v7', 'perpage_mesh_backup']) {
+      try {
+        const rec = await idbGet('meta', metaKey);
+        if (rec && rec.value) { saved = rec.value; break; }
+      } catch (e) {}
+    }
+  }
+
+  state = hydrateState(saved);
+}
+
+const simpleControls = ['fontSize', 'spacing', 'distortion', 'indent', 'opacity'];
+
+function applyTheme() {
+  const isDark = state.theme !== 'light';
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  $('themeToggle').textContent = isDark ? '☀️ Светлая' : '🌙 Тёмная';
+}
+
+function applySectionFilter(sectionName) {
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === sectionName);
+  });
+  document.querySelectorAll('.tool-card').forEach(card => {
+    if (sectionName === 'all') card.style.display = '';
+    else card.style.display = (card.dataset.group === sectionName) ? '' : 'none';
+  });
+}
+
+function getAllPhotos() { return [...photosLeft, ...photosRight]; }
+function findPhotoById(id) { return photosLeft.find(p => p.id === id) || photosRight.find(p => p.id === id) || null; }
+function ensureActivePhotoId() {
+  if (!findPhotoById(state.activeId)) {
+    const first = getAllPhotos()[0];
+    state.activeId = first ? first.id : null;
+  }
+}
+function getPhotoConfig(id) {
+  const key = id || 'default';
+  state.photoConfigs[key] = normalizePhotoConfig(state.photoConfigs[key]);
+  return state.photoConfigs[key];
+}
+
+function updateLabels() {
+  simpleControls.forEach(id => $('v-' + id).textContent = $(id).value);
+  $('v-cLine').textContent = $('cLine').value;
+}
+function syncInkInputs(hex) {
+  const norm = (hex || '').toLowerCase();
+  const preset = Array.from($('ink').options).find(o => o.value.toLowerCase() === norm);
+  if (preset) $('ink').value = preset.value;
+  if (/^#[0-9a-f]{6}$/i.test(hex)) $('inkCustom').value = hex;
+}
+function updateTabsUI() {
+  const mode = state.viewMode;
+  $('tabPreview').classList.toggle('active', mode === 'preview');
+  $('tabCalib').classList.toggle('active', mode === 'calib');
+  $('tabUpdates').classList.toggle('active', mode === 'updates');
+
+  const isUpdates = mode === 'updates';
+  $('cardsGrid').style.display = isUpdates ? 'none' : '';
+  $('fixTextBtn').style.display = isUpdates ? 'none' : '';
+
+  if (mode === 'updates') {
+    $('paneTitle').textContent = 'Обновления';
+    $('paneSubtitle').textContent = 'Проверка версий на GitHub и выбор версии приложения';
+  } else if (mode === 'calib') {
+    $('paneTitle').textContent = 'Границы и сетка листа';
+    $('paneSubtitle').textContent = 'Перетаскивайте рамку или узлы сетки прямо на изображении страницы';
+  } else {
+    $('paneTitle').textContent = 'Превью конспекта';
+    $('paneSubtitle').textContent = 'Настраивайте параметры и скачивайте готовые листы в PDF или PNG';
+  }
+}
+function updatePanelWarpSegUI(mode) {
+  document.querySelectorAll('#panelWarpSeg button').forEach(btn => {
+    const isMatch = btn.dataset.mode === mode;
+    btn.className = isMatch ? ('active' + (mode === 'off' ? ' off-mode' : '')) : '';
+  });
+}
+function applyStateToControls() {
+  applyTheme();
+  $('textInput').value = state.text;
+  $('font').value = state.font;
+  syncInkInputs(state.ink);
+  $('multiply').checked = !!state.multiply;
+  $('alternate').checked = state.alternate !== false;
+  simpleControls.forEach(id => $(id).value = state[id]);
+  updateTabsUI();
+  applyBaseToControls();
+}
+function applyBaseToControls() {
+  const activePhoto = findPhotoById(state.activeId);
+  $('selectedPhotoHint').textContent = activePhoto
+    ? `Лист: ${activePhoto.name} (${activePhoto.side === 'left' ? 'левый' : 'правый'})`
+    : 'Лист: по умолчанию';
+  const cfg = getPhotoConfig(state.activeId);
+  updatePanelWarpSegUI(cfg.warpMode);
+  $('cLine').value = cfg.base.line;
+  updateLabels();
+}
+
+function addCustomFontOption(name) {
+  let opt = document.querySelector('#font option[value="CustomHand"]');
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = 'CustomHand';
+    $('font').appendChild(opt);
+  }
+  opt.textContent = 'Свой: ' + name;
+}
+async function registerCustomFont(buffer, name) {
+  const face = new FontFace('CustomHand', buffer);
+  await face.load();
+  document.fonts.add(face);
+  addCustomFontOption(name);
+}
+async function ensureFont() {
+  try { await document.fonts.load(`${state.fontSize || 30}px "${state.font}"`, 'АаБбЯяЁё Abc'); } catch (e) {}
+}
+
+function loadImage(url) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img); img.onerror = rej; img.src = url;
+  });
+}
+async function buildPhotoItem(rec) {
+  const url = URL.createObjectURL(rec.blob);
+  const img = await loadImage(url);
+  return { id: rec.id, side: rec.side || 'left', name: rec.name, blob: rec.blob, url, img };
+}
+function renderPhotoSlot(container, list) {
+  container.innerHTML = '';
+  list.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'thumb' + (state.activeId === p.id ? ' active' : '');
+    d.style.backgroundImage = `url(${p.url})`;
+    d.innerHTML = `<span>${p.name.slice(0, 14)}</span>`;
+    d.onclick = () => selectPhoto(p.id, true);
+    const x = document.createElement('b');
+    x.textContent = '×';
+    x.title = 'Удалить фото';
+    x.onclick = e => { e.stopPropagation(); deletePhoto(p.id); };
+    d.appendChild(x);
+    container.appendChild(d);
+  });
+}
+function renderPhotoLists() {
+  renderPhotoSlot($('photosLeft'), photosLeft);
+  renderPhotoSlot($('photosRight'), photosRight);
+}
+function selectPhoto(id, scrollIntoCalib = false) {
+  state.activeId = id;
+  applyBaseToControls();
+  renderPhotoLists();
+  if (state.viewMode === 'calib') {
+    renderView();
+    if (scrollIntoCalib) {
+      const card = document.querySelector(`.page-card[data-photo-id="${id}"]`);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+}
+async function deletePhoto(id) {
+  const removeFrom = arr => {
+    const idx = arr.findIndex(p => p.id === id);
+    if (idx !== -1) {
+      URL.revokeObjectURL(arr[idx].url);
+      arr.splice(idx, 1);
+    }
+  };
+  removeFrom(photosLeft);
+  removeFrom(photosRight);
+  delete state.photoConfigs[id];
+  if (db) await idbDelete('photos', id);
+  ensureActivePhotoId();
+  applyBaseToControls();
+  renderPhotoLists();
+  renderView();
+  markDirty();
+}
+
+function resetSinglePhotoMesh(id) {
+  const key = id || 'default';
+  const cfg = getPhotoConfig(key);
+  cfg.base = Object.assign({}, DEFAULT_BASE);
+  cfg.mesh3 = createFlatMesh(3, cfg.base);
+  cfg.mesh4 = createFlatMesh(4, cfg.base);
+  if (key === (state.activeId || 'default')) applyBaseToControls();
+  renderView();
+  markDirty();
+}
+
+function setPhotoWarpMode(id, mode) {
+  const key = id || state.activeId || 'default';
+  const cfg = getPhotoConfig(key);
+  cfg.warpMode = (mode === '3' || mode === '4') ? mode : 'off';
+  if (key === (state.activeId || 'default')) updatePanelWarpSegUI(cfg.warpMode);
+  renderView();
+  markDirty();
+}
+
+function isLeftPageIndex(pageIndex) { return (pageIndex % 2 === 0); }
+
+function getTemplateForPage(pageIndex) {
+  const alt = !!state.alternate;
+  let chosen = null;
+  let side = 'left';
+
+  if (alt) {
+    side = isLeftPageIndex(pageIndex) ? 'left' : 'right';
+    const primary = side === 'left' ? photosLeft : photosRight;
+    const fallback = side === 'left' ? photosRight : photosLeft;
+    const n = Math.floor(pageIndex / 2);
+    if (primary.length) chosen = primary[n % primary.length];
+    else if (fallback.length) chosen = fallback[n % fallback.length];
+  } else {
+    const combined = getAllPhotos();
+    if (combined.length) {
+      chosen = combined[pageIndex % combined.length];
+      side = chosen.side;
+    }
+  }
+
+  if (chosen) {
+    return {
+      id: chosen.id, name: chosen.name, side: chosen.side, source: chosen.img,
+      W: chosen.img.naturalWidth, H: chosen.img.naturalHeight, cfg: getPhotoConfig(chosen.id)
+    };
+  }
+  return { id: 'default', name: 'Шаблон по умолчанию', side, source: null, W: 1000, H: 1414, cfg: getPhotoConfig('default') };
+}
+
+function sampleMesh(mesh, n, u, v) {
+  const gx = Math.max(0, Math.min(n - 1.0001, u * (n - 1)));
+  const gy = Math.max(0, Math.min(n - 1.0001, v * (n - 1)));
+  const c0 = Math.floor(gx), r0 = Math.floor(gy);
+  const c1 = Math.min(n - 1, c0 + 1), r1 = Math.min(n - 1, r0 + 1);
+  const tx = gx - c0, ty = gy - r0;
+  const p00 = mesh[r0 * n + c0], p10 = mesh[r0 * n + c1];
+  const p01 = mesh[r1 * n + c0], p11 = mesh[r1 * n + c1];
+  const xTop = p00.x + (p10.x - p00.x) * tx, xBot = p01.x + (p11.x - p01.x) * tx;
+  const yTop = p00.y + (p10.y - p00.y) * tx, yBot = p01.y + (p11.y - p01.y) * tx;
+  return { xPct: xTop + (xBot - xTop) * ty, yPct: yTop + (yBot - yTop) * ty };
+}
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function drawBackground(ctx, tpl) {
+  if (tpl.source) { ctx.drawImage(tpl.source, 0, 0, tpl.W, tpl.H); return; }
+  ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, tpl.W, tpl.H);
+}
+
+const measureCtx = document.createElement('canvas').getContext('2d');
+
+function buildPageGeom(t) {
+  const s = t.W / 1000, b = t.cfg.base;
+  const frameX = t.W * (b.left / 100), frameY = t.H * (b.top / 100);
+  const frameW = Math.max(40, t.W * (1 - (b.left + b.right) / 100));
+  const frameH = Math.max(40, t.H * (1 - (b.top + b.bottom) / 100));
+  const lh = Math.max(8, b.line * s), spacing = state.spacing * s;
+  const linesPerPage = Math.max(1, Math.floor(frameH / lh));
+  measureCtx.font = `${state.fontSize * s}px "${state.font}"`;
+  const charW = ch => measureCtx.measureText(ch).width + spacing;
+  const strW = str => { let w = 0; for (const ch of str) w += charW(ch); return w; };
+  const spaceW = charW(' ');
+  return { s, frameX, frameY, lh, spacing, frameW, frameH, linesPerPage, charW, strW, spaceW };
+}
+
+function wrapTextForGeom(rawText, geom, maxLines) {
+  const paragraphs = rawText.replace(/\r/g, '').split('\n');
+  const lines = [];
+  for (const par of paragraphs) {
+    const words = par.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      if (maxLines && lines.length >= maxLines) break;
+      lines.push({ text: '', indent: 0 }); continue;
+    }
+    let first = true, cur = '', curW = 0;
+    const avail = () => Math.max(20, geom.frameW - (first ? state.indent * geom.s : 0));
+    const pushLine = () => {
+      if (maxLines && lines.length >= maxLines) return false;
+      lines.push({ text: cur, indent: first ? state.indent * geom.s : 0 });
+      first = false; cur = ''; curW = 0; return true;
+    };
+    for (let word of words) {
+      let w = geom.strW(word);
+      while (w > geom.frameW) {
+        if (cur && !pushLine()) return lines;
+        let part = '', pw = 0;
+        for (const ch of word) { if (pw + geom.charW(ch) > avail() && part) break; part += ch; pw += geom.charW(ch); }
+        cur = part; curW = pw; if (!pushLine()) return lines;
+        word = word.slice(part.length); w = geom.strW(word);
+      }
+      if (!word) continue;
+      const need = cur ? curW + geom.spaceW + w : w;
+      if (need > avail() && cur && !pushLine()) return lines;
+      if (cur) { cur += ' ' + word; curW += geom.spaceW + w; } else { cur = word; curW = w; }
+    }
+    if (cur && !pushLine()) return lines;
+    if (maxLines && lines.length >= maxLines) break;
+  }
+  return lines;
+}
+
+function layoutAllPages() {
+  const paragraphs = state.text.replace(/\r/g, '').split('\n');
+  const pages = [];
+  let pageIndex = 0, tpl = getTemplateForPage(pageIndex), geom = buildPageGeom(tpl), curLines = [];
+
+  const flushPage = () => {
+    pages.push({ tpl, geom, lines: curLines });
+    pageIndex++; tpl = getTemplateForPage(pageIndex); geom = buildPageGeom(tpl); curLines = [];
+  };
+
+  for (const par of paragraphs) {
+    const words = par.split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      if (curLines.length >= geom.linesPerPage) flushPage();
+      curLines.push({ text: '', indent: 0 }); continue;
+    }
+    let first = true, cur = '', curW = 0;
+    const avail = () => Math.max(20, geom.frameW - (first ? state.indent * geom.s : 0));
+    const pushLine = () => {
+      if (curLines.length >= geom.linesPerPage) flushPage();
+      curLines.push({ text: cur, indent: first ? state.indent * geom.s : 0 });
+      first = false; cur = ''; curW = 0;
+    };
+    for (let word of words) {
+      let w = geom.strW(word);
+      while (w > geom.frameW) {
+        if (cur) pushLine();
+        let part = '', pw = 0;
+        for (const ch of word) { if (pw + geom.charW(ch) > avail() && part) break; part += ch; pw += geom.charW(ch); }
+        cur = part; curW = pw; pushLine();
+        word = word.slice(part.length); w = geom.strW(word);
+      }
+      if (!word) continue;
+      const need = cur ? curW + geom.spaceW + w : w;
+      if (need > avail() && cur) pushLine();
+      if (cur) { cur += ' ' + word; curW += geom.spaceW + w; } else { cur = word; curW = w; }
+    }
+    if (cur) pushLine();
+    if (pages.length > 500) break;
+  }
+  while (curLines.length && curLines[curLines.length - 1].text === '') curLines.pop();
+  if (curLines.length || !pages.length) pages.push({ tpl, geom, lines: curLines });
+  return pages;
+}
+
+function drawPage(canvas, pageData, seedIndex, withGuides) {
+  const { tpl, geom, lines } = pageData;
+  const mode = tpl.cfg.warpMode, warpOn = (mode === '3' || mode === '4');
+  const n = mode === '4' ? 4 : 3, mesh = mode === '4' ? tpl.cfg.mesh4 : tpl.cfg.mesh3;
+
+  canvas.width = tpl.W; canvas.height = tpl.H;
+  const ctx = canvas.getContext('2d');
+  const { s, frameX, frameY, lh, spacing, frameW, frameH } = geom;
+
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  drawBackground(ctx, tpl);
+
+  const mapPt = (lx, ly) => {
+    if (!warpOn) return { x: frameX + lx, y: frameY + ly };
+    const pt = sampleMesh(mesh, n, Math.max(0, Math.min(1, lx / frameW)), Math.max(0, Math.min(1, ly / frameH)));
+    return { x: (pt.xPct / 100) * tpl.W, y: (pt.yPct / 100) * tpl.H };
+  };
+
+  if (withGuides) {
+    ctx.save(); ctx.strokeStyle = 'rgba(22,163,74,.55)'; ctx.lineWidth = 1 * s;
+    const steps = warpOn ? 24 : 1;
+    for (let y = lh; y <= frameH + 1; y += lh) {
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const p = mapPt((i / steps) * frameW, y);
+        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  ctx.font = `${state.fontSize * s}px "${state.font}"`;
+  ctx.textBaseline = 'alphabetic'; ctx.fillStyle = state.ink;
+  ctx.globalAlpha = state.opacity;
+  ctx.globalCompositeOperation = state.multiply ? 'multiply' : 'source-over';
+  const d = state.distortion;
+
+  lines.forEach((line, i) => {
+    if (!line.text) return;
+    const rnd = mulberry32((seedIndex + 1) * 100003 + i * 977 + 13);
+    const localBaseY = (i + 1) * lh - 2 * s + (rnd() - 0.5) * 1.5 * d * s;
+    const tilt = (rnd() - 0.5) * 0.008 * d;
+    let lx = line.indent;
+
+    for (const ch of line.text) {
+      const w = ctx.measureText(ch).width;
+      if (ch !== ' ') {
+        const rot = (rnd() - 0.5) * 0.07 * d / 3 + 0.01 * d / 3;
+        const dy = (rnd() - 0.5) * 1.2 * d * s + (lx - line.indent) * tilt;
+        const sc = 1 + (rnd() - 0.5) * 0.025 * d / 3;
+        const pCur = mapPt(lx + w / 2, localBaseY + dy);
+        const pNext = mapPt(Math.min(frameW, lx + w / 2 + 8 * s), localBaseY + dy);
+        const localSlope = warpOn ? Math.atan2(pNext.y - pCur.y, Math.max(0.001, pNext.x - pCur.x)) : 0;
+        ctx.save();
+        ctx.translate(pCur.x, pCur.y); ctx.rotate(rot + localSlope); ctx.scale(sc, sc);
+        ctx.fillText(ch, -w / 2, 0);
+        ctx.restore();
+      }
+      lx += w + spacing + (rnd() - 0.5) * 0.3 * d * s;
+    }
+  });
+
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+
+function attachCalibOverlay(wrap, photoId, redrawCanvasOnly) {
+  const cfg = getPhotoConfig(photoId);
+  const selectThisCard = () => {
+    if (state.activeId !== photoId) {
+      state.activeId = photoId; applyBaseToControls(); renderPhotoLists();
+      document.querySelectorAll('.page-card').forEach(el => el.classList.toggle('selected-card', el.dataset.photoId === photoId));
+    }
+  };
+
+  if (cfg.warpMode === 'off') {
+    const box = document.createElement('div'); box.className = 'crop-box';
+    const syncBoxCss = () => {
+      box.style.left = cfg.base.left + '%'; box.style.top = cfg.base.top + '%';
+      box.style.width = Math.max(5, 100 - cfg.base.left - cfg.base.right) + '%';
+      box.style.height = Math.max(5, 100 - cfg.base.top - cfg.base.bottom) + '%';
+    };
+    syncBoxCss();
+    ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'].forEach(dir => {
+      const h = document.createElement('div'); h.className = 'handle ' + dir; h.dataset.dir = dir; box.appendChild(h);
+    });
+    box.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation(); selectThisCard();
+      const targetEl = e.target.classList.contains('handle') ? e.target : box;
+      const dir = targetEl.dataset.dir || 'move', pointerId = e.pointerId;
+      targetEl.setPointerCapture(pointerId);
+      const rect = wrap.getBoundingClientRect(), startX = e.clientX, startY = e.clientY;
+      const startLeft = cfg.base.left, startTop = cfg.base.top, startRight = cfg.base.right, startBottom = cfg.base.bottom;
+      let rafId = null;
+
+      const onMove = ev => {
+        if (ev.pointerId !== pointerId) return;
+        const dxPct = ((ev.clientX - startX) / rect.width) * 100, dyPct = ((ev.clientY - startY) / rect.height) * 100;
+        if (dir === 'move') {
+          const w = 100 - startLeft - startRight, h = 100 - startTop - startBottom;
+          const nl = Math.max(0, Math.min(100 - w, startLeft + dxPct)), nt = Math.max(0, Math.min(100 - h, startTop + dyPct));
+          cfg.base.left = +nl.toFixed(1); cfg.base.right = +(100 - nl - w).toFixed(1);
+          cfg.base.top = +nt.toFixed(1); cfg.base.bottom = +(100 - nt - h).toFixed(1);
+        } else {
+          if (dir.includes('w')) cfg.base.left = +Math.max(0, Math.min(100 - startRight - 8, startLeft + dxPct)).toFixed(1);
+          if (dir.includes('e')) cfg.base.right = +Math.max(0, Math.min(100 - startLeft - 8, startRight - dxPct)).toFixed(1);
+          if (dir.includes('n')) cfg.base.top = +Math.max(0, Math.min(100 - startBottom - 8, startTop + dyPct)).toFixed(1);
+          if (dir.includes('s')) cfg.base.bottom = +Math.max(0, Math.min(100 - startTop - 8, startBottom - dyPct)).toFixed(1);
+        }
+        cfg.mesh3 = syncMeshToBase(cfg.mesh3, 3, cfg.base);
+        cfg.mesh4 = syncMeshToBase(cfg.mesh4, 4, cfg.base);
+        syncBoxCss();
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            redrawCanvasOnly();
+          });
+        }
+        markDirty();
+      };
+
+      const onUp = ev => {
+        if (ev.pointerId !== pointerId) return;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        redrawCanvasOnly();
+        targetEl.removeEventListener('pointermove', onMove);
+        targetEl.removeEventListener('pointerup', onUp);
+        targetEl.removeEventListener('pointercancel', onUp);
+      };
+      targetEl.addEventListener('pointermove', onMove);
+      targetEl.addEventListener('pointerup', onUp);
+      targetEl.addEventListener('pointercancel', onUp);
+    });
+    wrap.appendChild(box); return;
+  }
+
+  const n = cfg.warpMode === '4' ? 4 : 3, mesh = cfg.warpMode === '4' ? cfg.mesh4 : cfg.mesh3;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'mesh-overlay'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+  const lines = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const p1 = mesh[r * n + c];
+      if (c + 1 < n) {
+        const p2 = mesh[r * n + (c + 1)];
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'drag-line'); line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
+        line.setAttribute('stroke', 'rgba(239,68,68,0.8)'); line.setAttribute('stroke-width', '0.55');
+        svg.appendChild(line); lines.push({ el: line, i1: r * n + c, i2: r * n + (c + 1) });
+      }
+      if (r + 1 < n) {
+        const p2 = mesh[(r + 1) * n + c];
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('class', 'drag-line'); line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
+        line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
+        line.setAttribute('stroke', 'rgba(239,68,68,0.8)'); line.setAttribute('stroke-width', '0.55');
+        svg.appendChild(line); lines.push({ el: line, i1: r * n + c, i2: (r + 1) * n + c });
+      }
+    }
+  }
+  wrap.appendChild(svg);
+
+  const centerIdx = Math.floor((n * n) / 2);
+  const nodes = mesh.map((pt, idx) => {
+    const isCenter = (n % 2 === 1 && idx === centerIdx);
+    const node = document.createElement('div');
+    node.className = 'mesh-node' + (isCenter ? ' move-all' : '');
+    node.style.left = pt.x + '%'; node.style.top = pt.y + '%';
+    wrap.appendChild(node); return { el: node, isCenter, idx };
+  });
+
+  const syncOverlayPos = () => {
+    lines.forEach(item => {
+      const a = mesh[item.i1], b = mesh[item.i2];
+      item.el.setAttribute('x1', a.x); item.el.setAttribute('y1', a.y);
+      item.el.setAttribute('x2', b.x); item.el.setAttribute('y2', b.y);
+    });
+    nodes.forEach(item => {
+      const p = mesh[item.idx];
+      item.el.style.left = p.x + '%'; item.el.style.top = p.y + '%';
+    });
+  };
+
+  const attachDragToTarget = (targetEl, mode, nodeIdx) => {
+    targetEl.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation(); selectThisCard();
+      const pointerId = e.pointerId; targetEl.setPointerCapture(pointerId);
+      const rect = wrap.getBoundingClientRect(), startX = e.clientX, startY = e.clientY;
+      const snapshot = mesh.map(p => ({ x: p.x, y: p.y }));
+      let rafId = null;
+      const onMove = ev => {
+        if (ev.pointerId !== pointerId) return;
+        const dx = ((ev.clientX - startX) / rect.width) * 100, dy = ((ev.clientY - startY) / rect.height) * 100;
+        if (mode === 'all') {
+          const minX = Math.min(...snapshot.map(p => p.x)), maxX = Math.max(...snapshot.map(p => p.x));
+          const minY = Math.min(...snapshot.map(p => p.y)), maxY = Math.max(...snapshot.map(p => p.y));
+          const clampedDx = Math.max(-minX, Math.min(100 - maxX, dx)), clampedDy = Math.max(-minY, Math.min(100 - maxY, dy));
+          for (let i = 0; i < mesh.length; i++) {
+            mesh[i].x = +(snapshot[i].x + clampedDx).toFixed(2);
+            mesh[i].y = +(snapshot[i].y + clampedDy).toFixed(2);
+          }
+        } else {
+          mesh[nodeIdx].x = +Math.max(0, Math.min(100, snapshot[nodeIdx].x + dx)).toFixed(2);
+          mesh[nodeIdx].y = +Math.max(0, Math.min(100, snapshot[nodeIdx].y + dy)).toFixed(2);
+        }
+        syncOverlayPos();
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => { rafId = null; redrawCanvasOnly(); });
+        }
+        markDirty();
+      };
+      const onUp = ev => {
+        if (ev.pointerId !== pointerId) return;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        redrawCanvasOnly();
+        targetEl.removeEventListener('pointermove', onMove);
+        targetEl.removeEventListener('pointerup', onUp);
+        targetEl.removeEventListener('pointercancel', onUp);
+      };
+      targetEl.addEventListener('pointermove', onMove);
+      targetEl.addEventListener('pointerup', onUp);
+      targetEl.addEventListener('pointercancel', onUp);
+    });
+  };
+
+  lines.forEach(item => attachDragToTarget(item.el, 'all', -1));
+  nodes.forEach(item => attachDragToTarget(item.el, item.isCenter ? 'all' : 'point', item.idx));
+}
+
+function createBottomSaveBar(labelText) {
+  const bar = document.createElement('div'); bar.className = 'bottom-save-box';
+  const info = document.createElement('span'); info.className = 'hint-txt'; info.textContent = labelText;
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 's-btn green';
+  btn.textContent = '💾 Сохранить'; btn.onclick = () => saveNow();
+  bar.appendChild(info); bar.appendChild(btn); return bar;
+}
+
+let renderToken = 0;
+
+async function renderUpdatesMode(token) {
+  if (token !== renderToken) return;
+  const box = $('preview');
+  box.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'page-card';
+  card.style.padding = '18px';
+  card.innerHTML = `
+    <div class="card-head" style="margin-bottom:14px">
+      <div class="card-head-left">
+        <div class="card-title-txt">Обновления</div>
+        <div class="card-sub-txt">Текущая версия: <b>${APP_VERSION}</b></div>
+      </div>
+      <div class="btn-row" style="margin:0">
+        <button type="button" class="s-btn" id="manualCheckUpdateBtn">🔄 Проверить</button>
+        <button type="button" class="s-btn ${updateStatus.hasUpdate ? 'amber' : 'green'}" id="openUpdateModalBtn">
+          ${updateStatus.hasUpdate ? 'Открыть обновление' : 'Обновление актуально'}
+        </button>
+      </div>
+    </div>
+
+    <div class="changelog-box">
+      <div><b>Статус:</b> ${updateStatus.hasUpdate ? `Доступна версия ${updateStatus.latestVersion}` : 'Обновление актуально'}</div>
+      <div><b>Последняя проверка:</b> ${updateStatus.checkedAt}</div>
+    </div>
+  `;
+  box.appendChild(card);
+
+  $('manualCheckUpdateBtn').onclick = () => {
+    checkForCodeUpdates(true);
+  };
+
+  $('openUpdateModalBtn').onclick = () => {
+    openUpdateDialog({
+      found: updateStatus.hasUpdate,
+      version: updateStatus.latestVersion,
+      notes: updateStatus.notes,
+      url: updateStatus.releaseUrl
+    });
+  };
+
+  box.appendChild(createBottomSaveBar('Настройки сохраняются локально на устройстве'));
+}
+
+async function renderPreviewMode(token) {
+  const pages = layoutAllPages();
+  if (token !== renderToken) return;
+  const box = $('preview'); box.innerHTML = '';
+
+  pages.forEach((pageData, idx) => {
+    const wrap = document.createElement('div'); wrap.className = 'page-card';
+    const canvasWrap = document.createElement('div'); canvasWrap.className = 'canvas-wrap';
+    const canvas = document.createElement('canvas');
+    drawPage(canvas, pageData, idx, false); canvasWrap.appendChild(canvas);
+
+    const bar = document.createElement('div'); bar.className = 'page-bar';
+    const sideLabel = pageData.tpl.id === 'default'
+      ? 'шаблон по умолчанию' : `${pageData.tpl.side === 'left' ? 'левая' : 'правая'} · ${pageData.tpl.name}`;
+    bar.innerHTML = `<span><b>Страница ${idx + 1}</b> из ${pages.length} — ${sideLabel}</span>`;
+
+    const actions = document.createElement('div'); actions.className = 'page-bar-actions';
+    if (pageData.tpl.id !== 'default') {
+      const editBtn = document.createElement('button'); editBtn.type = 'button'; editBtn.className = 's-btn';
+      editBtn.textContent = 'Рамка';
+      editBtn.onclick = () => {
+        state.activeId = pageData.tpl.id; state.viewMode = 'calib';
+        updateTabsUI(); applyBaseToControls(); renderPhotoLists();
+        renderView().then(() => {
+          const card = document.querySelector(`.page-card[data-photo-id="${pageData.tpl.id}"]`);
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+      };
+      actions.appendChild(editBtn);
+    }
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 's-btn accent';
+    btn.textContent = '⬇ PNG'; btn.onclick = () => downloadPage(idx);
+    actions.appendChild(btn);
+
+    bar.appendChild(actions); wrap.appendChild(canvasWrap); wrap.appendChild(bar); box.appendChild(wrap);
+  });
+
+  box.appendChild(createBottomSaveBar('Изменения могут быть не применены, если не нажать «Сохранить»'));
+}
+
+async function renderCalibMode(token) {
+  if (token !== renderToken) return;
+  const box = $('preview'); box.innerHTML = '';
+
+  const all = getAllPhotos();
+  if (!all.length) {
+    const empty = document.createElement('div'); empty.className = 'section-banner';
+    empty.textContent = 'Загрузите левые или правые фотографии страниц, чтобы настроить границы и сетку.';
+    box.appendChild(empty);
+    box.appendChild(createBottomSaveBar('Изменения могут быть не применены, если не нажать «Сохранить»'));
+    return;
+  }
+
+  const groups = [
+    { title: 'Левые страницы (' + photosLeft.length + ')', list: photosLeft, sideLabel: 'левая' },
+    { title: 'Правые страницы (' + photosRight.length + ')', list: photosRight, sideLabel: 'правая' }
+  ];
+  let seedCounter = 0;
+
+  groups.forEach(group => {
+    if (!group.list.length) return;
+    const banner = document.createElement('div'); banner.className = 'section-banner'; banner.textContent = group.title;
+    box.appendChild(banner);
+
+    group.list.forEach((photo, i) => {
+      const seedIdx = seedCounter++, cfg = getPhotoConfig(photo.id);
+      const tpl = {
+        id: photo.id, name: photo.name, side: photo.side, source: photo.img,
+        W: photo.img.naturalWidth, H: photo.img.naturalHeight, cfg
+      };
+      const wrap = document.createElement('div');
+      wrap.className = 'page-card' + (state.activeId === photo.id ? ' selected-card' : '');
+      wrap.dataset.photoId = photo.id;
+
+      const canvasWrap = document.createElement('div'); canvasWrap.className = 'canvas-wrap';
+      const canvas = document.createElement('canvas'); canvasWrap.appendChild(canvas);
+
+      const redrawCanvasOnly = () => {
+        const sampleText = state.text || '';
+        const geom = buildPageGeom(tpl);
+        const sampleLines = wrapTextForGeom(sampleText, geom, geom.linesPerPage);
+        drawPage(canvas, { tpl, geom, lines: sampleLines }, seedIdx, true);
+      };
+      redrawCanvasOnly(); attachCalibOverlay(canvasWrap, photo.id, redrawCanvasOnly);
+
+      const bar = document.createElement('div'); bar.className = 'page-bar';
+      bar.innerHTML = `<span><b>${group.sideLabel === 'левая' ? 'Левая' : 'Правая'} #${i + 1}:</b> ${photo.name}</span>`;
+
+      const actions = document.createElement('div'); actions.className = 'page-bar-actions';
+      const seg = document.createElement('div'); seg.className = 'seg-group';
+      [{ val: 'off', label: 'Рамка' }, { val: '3', label: '3×3' }, { val: '4', label: '4×4' }].forEach(opt => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = opt.label;
+        if (cfg.warpMode === opt.val) b.className = 'active' + (opt.val === 'off' ? ' off-mode' : '');
+        b.onclick = e => {
+          e.stopPropagation(); state.activeId = photo.id;
+          applyBaseToControls(); renderPhotoLists(); setPhotoWarpMode(photo.id, opt.val);
+        };
+        seg.appendChild(b);
+      });
+      actions.appendChild(seg);
+
+      const resetBtn = document.createElement('button'); resetBtn.type = 'button'; resetBtn.className = 's-btn';
+      resetBtn.textContent = '↺ Сброс';
+      resetBtn.onclick = e => {
+        e.stopPropagation(); state.activeId = photo.id;
+        applyBaseToControls(); renderPhotoLists(); resetSinglePhotoMesh(photo.id);
+      };
+      actions.appendChild(resetBtn);
+
+      bar.appendChild(actions); wrap.appendChild(canvasWrap); wrap.appendChild(bar); box.appendChild(wrap);
+    });
+  });
+
+  box.appendChild(createBottomSaveBar('Изменения могут быть не применены, если не нажать «Сохранить»'));
+}
+
+async function renderView() {
+  const token = ++renderToken;
+  await ensureFont();
+  if (token !== renderToken) return;
+  if (state.viewMode === 'updates') await renderUpdatesMode(token);
+  else if (state.viewMode === 'calib') await renderCalibMode(token);
+  else await renderPreviewMode(token);
+}
+
+async function downloadPage(idx) {
+  await ensureFont();
+  const pages = layoutAllPages(); const pageData = pages[idx]; if (!pageData) return;
+  const c = document.createElement('canvas'); drawPage(c, pageData, idx, false);
+  const a = document.createElement('a'); a.href = c.toDataURL('image/png');
+  a.download = `konspekt_${idx + 1}.png`; a.click();
+}
+
+async function downloadAll() {
+  await ensureFont();
+  const pages = layoutAllPages();
+  for (let i = 0; i < pages.length; i++) { await downloadPage(i); await new Promise(r => setTimeout(r, 250)); }
+}
+
+async function exportPdf() {
+  await ensureFont();
+  if (!window.jspdf) return showCornerNotice('jsPDF не загрузился', false);
+  const { jsPDF } = window.jspdf; const pages = layoutAllPages();
+  if (!pages.length) return showCornerNotice('Нет страниц для экспорта', false);
+  const c = document.createElement('canvas'); let doc = null;
+  for (let i = 0; i < pages.length; i++) {
+    drawPage(c, pages[i], i, false);
+    const w = c.width, h = c.height, o = w > h ? 'l' : 'p';
+    if (!doc) doc = new jsPDF({ orientation: o, unit: 'px', format: [w, h], compress: true });
+    else doc.addPage([w, h], o);
+    doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, w, h);
+  }
+  doc.save('konspekt.pdf');
+  showCornerNotice('PDF готов ✔', false);
+}
+
+function bindEvents() {
+  $('themeToggle').onclick = () => {
+    state.theme = state.theme === 'light' ? 'dark' : 'light';
+    applyTheme(); markDirty();
+  };
+
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (state.viewMode === 'updates') {
+        state.viewMode = 'preview';
+        updateTabsUI();
+        renderView();
+      }
+      applySectionFilter(btn.dataset.section);
+    });
+  });
+
+  $('tabPreview').onclick = () => { state.viewMode = 'preview'; updateTabsUI(); renderView(); };
+  $('tabCalib').onclick   = () => { state.viewMode = 'calib';   updateTabsUI(); renderView(); };
+  $('tabUpdates').onclick = () => { state.viewMode = 'updates'; updateTabsUI(); renderView(); };
+
+  $('closeUpdateModalBtn').onclick = () => $('updateModal').classList.remove('show');
+  $('updateModal').onclick = e => { if (e.target.id === 'updateModal') e.currentTarget.classList.remove('show'); };
+  $('openUpdateModalFromBannerBtn').onclick = () => openUpdateDialog({
+    found: updateStatus.hasUpdate,
+    version: updateStatus.latestVersion,
+    notes: updateStatus.notes,
+    url: updateStatus.releaseUrl
+  });
+
+  document.querySelectorAll('#panelWarpSeg button').forEach(btn => {
+    btn.addEventListener('click', () => setPhotoWarpMode(state.activeId, btn.dataset.mode));
+  });
+
+  $('textInput').addEventListener('input', e => { state.text = e.target.value; renderView(); markDirty(); });
+  $('font').addEventListener('change', e => { state.font = e.target.value; renderView(); markDirty(); });
+
+  $('ink').addEventListener('change', e => { state.ink = e.target.value; $('inkCustom').value = e.target.value; renderView(); markDirty(); });
+  $('inkCustom').addEventListener('input', e => { state.ink = e.target.value; syncInkInputs(e.target.value); renderView(); markDirty(); });
+
+  $('multiply').addEventListener('change', e => { state.multiply = e.target.checked; renderView(); markDirty(); });
+  $('alternate').addEventListener('change', e => { state.alternate = e.target.checked; renderView(); markDirty(); });
+
+  simpleControls.forEach(id => $(id).addEventListener('input', e => {
+    state[id] = parseFloat(e.target.value); updateLabels(); renderView(); markDirty();
+  }));
+
+  $('cLine').addEventListener('input', e => {
+    const cfg = getPhotoConfig(state.activeId);
+    cfg.base.line = parseFloat(e.target.value); updateLabels(); renderView(); markDirty();
+  });
+
+  $('resetPhotoMesh').onclick = () => resetSinglePhotoMesh(state.activeId);
+
+  $('copyToSameSide').onclick = () => {
+    const active = findPhotoById(state.activeId);
+    if (!active) return showCornerNotice('Сначала выберите фото', false);
+    const srcCfg = JSON.parse(JSON.stringify(getPhotoConfig(active.id)));
+    const targetList = active.side === 'left' ? photosLeft : photosRight;
+    targetList.forEach(p => { state.photoConfigs[p.id] = JSON.parse(JSON.stringify(srcCfg)); });
+    renderView(); markDirty();
+  };
+
+  $('fontFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      await registerCustomFont(buffer.slice(0), file.name);
+      if (db) await idbPut('meta', { key: 'customFont', name: file.name, buffer });
+      state.customFontName = file.name; state.font = 'CustomHand'; $('font').value = 'CustomHand';
+      renderView(); markDirty();
+    } catch (err) { showCornerNotice('Не удалось загрузить шрифт .ttf / .otf', false); }
+    e.target.value = '';
+  });
+
+  async function handlePhotoUpload(inputEl, side, targetArr) {
+    for (const file of inputEl.files) {
+      const rec = { id: side[0] + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), side, name: file.name, blob: file };
+      if (db) await idbPut('photos', rec);
+      const item = await buildPhotoItem(rec);
+      targetArr.push(item);
+      state.photoConfigs[rec.id] = {
+        base: Object.assign({}, DEFAULT_BASE), warpMode: 'off',
+        mesh3: createFlatMesh(3, DEFAULT_BASE), mesh4: createFlatMesh(4, DEFAULT_BASE)
+      };
+      state.activeId = rec.id;
+    }
+    inputEl.value = '';
+    applyBaseToControls(); renderPhotoLists(); renderView(); markDirty();
+  }
+
+  $('filesLeft').addEventListener('change', e => handlePhotoUpload(e.target, 'left', photosLeft));
+  $('filesRight').addEventListener('change', e => handlePhotoUpload(e.target, 'right', photosRight));
+
+  $('btnSave').onclick = () => saveNow();
+  $('downloadAll').onclick = downloadAll;
+  $('btnPdf').onclick = exportPdf;
+
+  $('resetAll').onclick = async () => {
+    const keptPhotoConfigs = JSON.parse(JSON.stringify(state.photoConfigs || {}));
+    const keptActiveId = state.activeId;
+    const keptTheme = state.theme;
+    const keptViewMode = state.viewMode;
+
+    state = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), {
+      text: '',
+      photoConfigs: keptPhotoConfigs,
+      activeId: keptActiveId,
+      theme: keptTheme,
+      viewMode: keptViewMode
+    });
+
+    ensureActivePhotoId();
+    applyStateToControls();
+    renderPhotoLists();
+    await renderView();
+    markDirty();
+  };
+
+  window.addEventListener('beforeunload', e => {
+    if (hasUnsavedChanges) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+}
+
+(async function init() {
+  try {
+    db = await Promise.race([
+      openDB(),
+      new Promise(resolve => setTimeout(() => resolve(null), 800))
+    ]);
+  } catch (e) {
+    db = null;
+  }
+
+  await loadSettings();
+
+  let recs = db ? await idbGetAll('photos') : [];
+  if (!recs.length) {
+    const api = await waitForPywebviewApi(2500);
+    if (api && typeof api.load_photos === 'function') {
+      try {
+        const diskPhotos = await api.load_photos();
+        for (const dp of (diskPhotos || [])) {
+          const blob = await (await fetch(dp.dataUrl)).blob();
+          const rec = { id: dp.id, side: dp.side, name: dp.name, blob };
+          if (db) await idbPut('photos', rec);
+          recs.push(rec);
+        }
+      } catch (e) {}
+    }
+  }
+
+  for (const rec of recs) {
+    try {
+      const item = await buildPhotoItem(rec);
+      if (item.side === 'right') photosRight.push(item);
+      else photosLeft.push(item);
+    } catch (e) {}
+  }
+
+  ensureActivePhotoId();
+
+  const cf = db ? await idbGet('meta', 'customFont') : null;
+  if (cf) {
+    try { await registerCustomFont(cf.buffer.slice(0), cf.name); } catch (e) {}
+  }
+  if (state.font === 'CustomHand' && !cf) state.font = 'Caveat';
+
+  applyStateToControls();
+  renderPhotoLists();
+  bindEvents();
+  await renderView();
+  document.fonts.ready.then(renderView);
+
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const LAST_CHECK_KEY = 'hw_last_update_check_ts';
+
+  async function maybeCheckUpdatesDaily(force = false) {
+    const lastTs = parseInt(localStorage.getItem(LAST_CHECK_KEY) || '0', 10);
+    const now = Date.now();
+    if (!force && lastTs && (now - lastTs) < ONE_DAY_MS) {
+      syncUpdateUI();
+      return;
+    }
+    localStorage.setItem(LAST_CHECK_KEY, String(now));
+    await checkForCodeUpdates(true);
+  }
+
+  await maybeCheckUpdatesDaily(false);
+  setInterval(() => maybeCheckUpdatesDaily(false), ONE_DAY_MS);
+})();
+</script>
+
+<script>
+(function () {
+  const textarea = document.getElementById('textInput') || document.getElementById('text');
+  const fixBtn = document.getElementById('fixTextBtn');
+  if (!textarea || !fixBtn) return;
+
+  const WORD_DICTIONARY = [
+    [/\bпотомучто\b/gi, 'потому что'], [/\bвообщем\b/gi, 'в общем'], [/\bвобщем\b/gi, 'в общем'],
+    [/\bв\s+общем-то\b/gi, 'в общем-то'], [/\bна\s+счет\b/gi, 'насчёт'],
+    [/\bв\s+течении\s+(дня|часа|года|недели|месяца|времени|урока|лекции)\b/gi, 'в течение $1'],
+    [/\bв\s+продолжении\s+(дня|часа|года|недели|месяца|времени|урока|лекции)\b/gi, 'в продолжение $1'],
+    [/\bв\s+следствии\b/gi, 'вследствие'], [/\bне\s+смотря\s+на\s+то\b/gi, 'несмотря на то'],
+    [/\bтак\s+же,\s+как\b/gi, 'так же, как'], [/\bчто\s+бы\s+(ни|не)\b/gi, 'что бы $1'],
+    [/\bдля\s+того\s+что\s+бы\b/gi, 'для того чтобы'], [/\bдля\s+того,\s+что\s+бы\b/gi, 'для того, чтобы'],
+    [/\bиз\s+за\b/gi, 'из-за'], [/\bиз\s+под\b/gi, 'из-под'], [/\bиз\s+над\b/gi, 'из-над'],
+    [/\bпо\s+моему\b/gi, 'по-моему'], [/\bпо\s+твоему\b/gi, 'по-твоему'], [/\bпо\s+своему\b/gi, 'по-своему'],
+    [/\bпо\s+нашему\b/gi, 'по-нашему'], [/\bпо\s+вашему\b/gi, 'по-вашему'], [/\bпо\s+новому\b/gi, 'по-новому'],
+    [/\bпо\s+старому\b/gi, 'по-старому'], [/\bпо\s+прежнему\b/gi, 'по-прежнему'], [/\bпо\s+другому\b/gi, 'по-другому'],
+    [/\bво\s+первых\b/gi, 'во-первых'], [/\bво\s+вторых\b/gi, 'во-вторых'], [/\bв\s+третьих\b/gi, 'в-третьих'],
+    [/\bв\s+четвертых\b/gi, 'в-четвёртых'], [/\bв\s+пятых\b/gi, 'в-пятых'],
+    [/\bкак\s+буд-то\b/gi, 'как будто'], [/\bкакбудто\b/gi, 'как будто'],
+    [/\bвсе\s+таки\b/gi, 'всё-таки'], [/\bвсё\s+таки\b/gi, 'всё-таки'], [/\bвсетаки\b/gi, 'всё-таки'],
+    [/\bсдесь\b/gi, 'здесь'], [/\bзделать\b/gi, 'сделать'], [/\bчерезчур\b/gi, 'чересчур'], [/\bпридти\b/gi, 'прийти'],
+    [/\bсимпотичный\b/gi, 'симпатичный'], [/\bкоординально\b/gi, 'кардинально'], [/\bбудующий\b/gi, 'будущий'],
+    [/\bучавствовать\b/gi, 'участвовать'], [/\bчуствовать\b/gi, 'чувствовать'], [/\bинциндент\b/gi, 'инцидент'],
+    [/\bпрецендент\b/gi, 'прецедент'], [/\bколличество\b/gi, 'количество'], [/\bискуственный\b/gi, 'искусственный'],
+    [/\bискуство\b/gi, 'искусство'], [/\bпрофесия\b/gi, 'профессия'], [/\bпроццес\b/gi, 'процесс'],
+    [/\bакуратный\b/gi, 'аккуратный'], [/\bтеритория\b/gi, 'территория'], [/\bэфект\b/gi, 'эффект'],
+    [/\bкоефициент\b/gi, 'коэффициент'], [/\bпаралельный\b/gi, 'параллельный'], [/\bперпендекуляр\b/gi, 'перпендикуляр'],
+    [/\bтипература\b/gi, 'температура'], [/\bелектричество\b/gi, 'электричество'], [/\bоприделение\b/gi, 'определение'],
+    [/\bхарактиристика\b/gi, 'характеристика'], [/\bкласификация\b/gi, 'классификация'], [/\bфункцыя\b/gi, 'функция'],
+    [/\bпринцып\b/gi, 'принцип'], [/\bоснавной\b/gi, 'основной'], [/\bобезательно\b/gi, 'обязательно'],
+    [/\bотноситеьно\b/gi, 'относительно'], [/\bсоотвественно\b/gi, 'соответственно'], [/\bследавательно\b/gi, 'следовательно']
+  ];
+
+  function preserveCase(match, replacement) {
+    if (!match) return replacement;
+    if (match === match.toUpperCase() && match !== match.toLowerCase()) return replacement.toUpperCase();
+    if (match[0] === match[0].toUpperCase() && match[0] !== match[0].toLowerCase()) {
+      return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+    }
+    return replacement;
+  }
+
+  function smartSplitParagraphs(text) {
+    text = text.replace(/\s+(Тема:|Глава\s+\d+|Раздел\s+\d+|§\s*\d+|Лекция\b|Вывод:|Выводы:|Итог:|Итоги:|Определение:|Правило:|Формула:|Пример:|Примеры:|Примечание:|Запомнить:)/gi, '\n\n$1');
+    text = text.replace(/([.!?:;»)])\s+(\d{1,2}[.)]\s+[А-ЯЁA-Z])/g, '$1\n\n$2');
+    text = text.replace(/([.!?:;»)])\s+([—•*-]\s+[А-ЯЁA-Z])/g, '$1\n\n$2');
+    const rawBlocks = text.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    const resultBlocks = [];
+
+    for (const block of rawBlocks) {
+      if (block.length < 220 || /^(\d{1,2}[.)]|[—•*-])\s+/.test(block)) { resultBlocks.push(block); continue; }
+      const protectedText = block.replace(/\b(т\.\s*е\.|т\.\s*к\.|т\.\s*д\.|т\.\s*п\.|др\.|пр\.|см\.|рис\.|стр\.|г\.|гг\.|в\.|вв\.|н\.\s*э\.)/gi, m => m.replace(/\./g, '___DOT___'));
+      const sentences = protectedText.split(/(?<=[.!?…])\s+(?=[А-ЯЁA-Z«"(\[—0-9])/).map(s => s.replace(/___DOT___/g, '.').trim()).filter(Boolean);
+      if (sentences.length <= 3) { resultBlocks.push(block); continue; }
+      let chunk = [], chunkLen = 0;
+      for (const sent of sentences) {
+        const startsNewThought = /^(Однако|Таким образом|Следовательно|Кроме того|Более того|Во-первых|Во-вторых|В-третьих|В итоге|В результате|В заключение|Например|Рассмотрим|Отметим|Важно|Главное)\b/i.test(sent);
+        if (chunk.length > 0 && (startsNewThought || chunk.length >= 3 || chunkLen + sent.length > 320)) {
+          resultBlocks.push(chunk.join(' ')); chunk = [sent]; chunkLen = sent.length;
+        } else { chunk.push(sent); chunkLen += sent.length + 1; }
+      }
+      if (chunk.length) resultBlocks.push(chunk.join(' '));
+    }
+    return resultBlocks.join('\n\n');
+  }
+
+  function applyLocalGrammarAndOrthography(raw) {
+    let text = String(raw || '').replace(/\r\n?/g, '\n').split('\n').map(line => line.replace(/[ \t]+/g, ' ').trim()).join('\n').trim();
+    if (!text) return '';
+    for (const [rx, rep] of WORD_DICTIONARY) {
+      text = text.replace(rx, m => preserveCase(m, m.replace(rx, rep)));
+    }
+    text = text.replace(/^[-–]\s+/gm, '— ').replace(/([ \t]+)[-–—]([ \t]+)/g, ' — ');
+    text = text.replace(/[ \t]+([,.;:!?…])/g, '$1').replace(/([,;:!?…])([^\s\n»")\]}0-9.,;:!?…])/g, '$1 $2');
+    text = text.replace(/([а-яёa-z0-9»)])\s+(а|но|однако|зато|чтобы|потому что|так как|так что|поскольку|несмотря на то что|хотя|если|когда|который|которая|которое|которые)\b/gi, '$1, $2');
+    text = smartSplitParagraphs(text);
+    return text.split(/\n{2,}/).map(par => {
+      let p = par.replace(/[ \t]+/g, ' ').trim();
+      if (!p) return '';
+      p = p.replace(/^((?:\d{1,2}[.)]\s+|—\s+|«|"|\(|\[)*)([a-zа-яё])/i, (_, pre, ch) => pre + ch.toUpperCase());
+      if (p.length > 45 && !/[.!?…:;»")\]}]$/.test(p)) p += '.';
+      return p;
+    }).filter(Boolean).join('\n\n');
+  }
+
+  fixBtn.addEventListener('click', function () {
+    const raw = textarea.value;
+    if (!raw.trim()) { showCornerNotice('⚠ Сначала введите текст конспекта', false); return; }
+    textarea.value = applyLocalGrammarAndOrthography(raw);
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    markDirty();
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+/* АвтоРучка — адаптация интерфейса под телефоны и планшеты */
+
+html, body { -webkit-tap-highlight-color: transparent; }
+.shell { height: 100vh; height: 100dvh; }
+button, label.s-btn, a.s-btn, select { touch-action: manipulation; }
+
+@media (max-width: 900px) {
+  /* Верхняя панель: бренд + тема в первой строке, вкладки — второй строкой */
+  .topbar {
+    height: auto; flex-wrap: wrap; padding: 8px 12px 6px; gap: 6px 10px;
+  }
+  .brand { font-size: 15px; }
+  .top-actions { margin-left: auto; }
+  .top-tabs {
+    order: 3; width: 100%; overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none; gap: 6px; padding-top: 2px;
+  }
+  .top-tabs::-webkit-scrollbar { display: none; }
+  .top-tab { padding: 7px 11px; white-space: nowrap; flex-shrink: 0; font-size: 13px; }
+
+  .update-banner { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+
+  /* Боковая панель превращается в горизонтальную ленту разделов */
+  .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .sidebar, .main-pane, .nav-list, .tool-card { min-width: 0; }
+  body, .shell { max-width: 100vw; overflow-x: hidden; }
+  .sidebar {
+    border-right: 0; border-bottom: 1px solid var(--border);
+    padding: 8px 10px; gap: 8px; overflow: visible;
+  }
+  .sidebar-label { display: none; }
+  .nav-list {
+    flex-direction: row; overflow-x: auto; gap: 6px; scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .nav-list::-webkit-scrollbar { display: none; }
+  .nav-item { width: auto; flex-shrink: 0; white-space: nowrap; padding: 7px 10px; }
+  .nav-item.active { box-shadow: none; }
+  .sidebar-footer { flex-direction: row; padding-top: 8px; gap: 8px; }
+  .save-cta { flex: 1.4; padding: 10px 12px; }
+  .action-tile.reset { flex: 1; width: auto; padding: 9px 8px; white-space: nowrap; font-size: 12px; }
+
+  .main-pane { padding: 14px 12px 90px; }
+  .pane-header { margin-bottom: 14px; align-items: stretch; }
+  .pane-header h2 { font-size: 19px; }
+  .primary-pill-btn { width: 100%; justify-content: center; padding: 10px 14px; }
+
+  .cards-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .tool-card { padding: 14px; }
+  .card-head .btn-row { width: 100%; }
+  .card-head .btn-row .s-btn { flex: 1; }
+
+  /* Крупнее элементы под палец */
+  button.s-btn, label.s-btn, a.s-btn { padding: 10px 12px; font-size: 13px; }
+  select, input[type=text] { padding: 11px 10px; font-size: 14px; }
+  textarea { font-size: 15px; min-height: 170px; }
+
+  input[type=range] { height: 32px; }
+  input[type=range]::-webkit-slider-runnable-track { height: 7px; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -8.5px; }
+  input[type=range]::-moz-range-track { height: 7px; }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; }
+
+  .check-row input[type=checkbox] { width: 20px; height: 20px; }
+  .check-row label { font-size: 13.5px; }
+  .seg-group { padding: 4px; gap: 4px; }
+  .seg-group button { padding: 9px 10px; font-size: 13px; }
+  .thumb { width: 72px; height: 98px; }
+  .thumb b { width: 22px; height: 22px; line-height: 22px; font-size: 13px; }
+
+  /* Узлы сетки и ручки рамки — больше для касаний */
+  .mesh-node { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+  .mesh-node.move-all { width: 28px; height: 28px; margin: -14px 0 0 -14px; }
+  .crop-box .handle { width: 24px; height: 24px; border-radius: 5px; }
+  .crop-box .handle.nw { top: -12px; left: -12px; }
+  .crop-box .handle.ne { top: -12px; right: -12px; }
+  .crop-box .handle.sw { bottom: -12px; left: -12px; }
+  .crop-box .handle.se { bottom: -12px; right: -12px; }
+  .crop-box .handle.n  { top: -12px; margin-left: -12px; }
+  .crop-box .handle.s  { bottom: -12px; margin-left: -12px; }
+  .crop-box .handle.w  { left: -12px; margin-top: -12px; }
+  .crop-box .handle.e  { right: -12px; margin-top: -12px; }
+
+  .page-card { border-radius: 11px; }
+  .page-bar { padding: 10px 12px; }
+
+  #toast { left: 12px; right: 12px; bottom: 14px; max-width: none; text-align: center; }
+  .update-modal .btn-row { flex-wrap: wrap; }
+  .update-modal .btn-row .s-btn { flex: 1; }
+}
+
+@media (max-width: 380px) {
+  .brand span:not(.ver-badge) { font-size: 14px; }
+  .icon-btn { padding: 6px 9px; }
+  .sidebar-footer { flex-direction: column; }
+}
