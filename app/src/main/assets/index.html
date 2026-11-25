@@ -587,10 +587,117 @@
     pointer-events: none; z-index: 999; box-shadow: 0 8px 20px rgba(4, 6, 15, 0.45);
   }
   #toast.show { opacity: 1; transform: translateY(0); }
+  .terms-backdrop[hidden] {
+  display: none;
+}
+
+.terms-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(12, 14, 20, 0.78);
+  backdrop-filter: blur(4px);
+}
+
+.terms-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 20px;
+  border-radius: 14px;
+  background: #181a20;
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.terms-title {
+  margin: 0 0 10px;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.terms-text {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.terms-link {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+.terms-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.terms-check input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.terms-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.terms-btn {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #3b82f6;
+  color: #fff;
+}
+
+.terms-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 </style>
 <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
+<div id="terms-modal" class="terms-backdrop" role="dialog" aria-modal="true" aria-labelledby="terms-title" hidden>
+  <div class="terms-card">
+    <h2 id="terms-title" class="terms-title">Условия пользования</h2>
+    <p class="terms-text">
+      Перед началом работы ознакомьтесь с условиями пользования приложением «АвтоРучка».
+      Текст доступен на странице проекта:
+      <a
+        id="terms-link"
+        class="terms-link"
+        href="https://github.com/androe123/AutoPen-Android/blob/main/TERMS.md"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Открыть условия пользования</a>.
+    </p>
+
+    <label class="terms-check">
+      <input type="checkbox" id="terms-agree-checkbox">
+      <span>Я прочитал(а) и принимаю условия пользования</span>
+    </label>
+
+    <div class="terms-actions">
+      <button type="button" id="terms-accept-btn" class="terms-btn" disabled>Принять и продолжить</button>
+    </div>
+  </div>
+</div>
 <div class="shell">
   <div class="update-banner" id="updateBanner">
     <span id="updateBannerText">Доступно обновление на GitHub.</span>
@@ -836,7 +943,7 @@ const GITHUB_REPO_URL = 'https://github.com/androe123/AutoPen-Android';
 const REMOTE_MANIFEST_URL = 'https://raw.githubusercontent.com/androe123/AutoPen-Android/main/version.json';
 const AVAILABLE_VERSIONS = ['v1.2.0', 'v1.2.1', 'v1.3.0'];
 
-let APP_VERSION = localStorage.getItem('hw_selected_version') || 'v1.2.2';
+let APP_VERSION = localStorage.getItem('hw_selected_version') || 'v1.2.3';
 
 let updateStatus = {
   hasUpdate: false,
@@ -904,6 +1011,26 @@ function syncUpdateUI() {
     $('updateBannerText').textContent = `Доступно обновление ${updateStatus.latestVersion} на GitHub.`;
   }
 }
+function isNewerVersion(latest, current) {
+  const clean = (v) =>
+    String(v || '')
+      .trim()
+      .replace(/^v/i, '')
+      .split('.')
+      .map((n) => parseInt(n, 10) || 0);
+
+  const a = clean(latest);
+  const b = clean(current);
+  const len = Math.max(a.length, b.length);
+
+  for (let i = 0; i < len; i++) {
+    const numA = a[i] ?? 0;
+    const numB = b[i] ?? 0;
+    if (numA > numB) return true;
+    if (numA < numB) return false;
+  }
+  return false;
+}
 
 async function checkForCodeUpdates(showDialogIfFound = true) {
   updateStatus.checkedAt = new Date().toLocaleTimeString();
@@ -917,7 +1044,7 @@ async function checkForCodeUpdates(showDialogIfFound = true) {
       const res = await fetch(`${REMOTE_MANIFEST_URL}?t=${Date.now()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.version && data.version !== APP_VERSION) {
+        if (data && data.version && isNewerVersion(data.version, APP_VERSION)) {
           found = true;
           remoteVer = data.version;
           remoteUrl = data.url || `${GITHUB_REPO_URL}/releases`;
@@ -2262,6 +2389,57 @@ function bindEvents() {
     textarea.value = applyLocalGrammarAndOrthography(raw);
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
     markDirty();
+  });
+})();
+(function initTermsGate() {
+  const TERMS_KEY = 'autopen_terms_accepted_v1';
+
+  const modal = document.getElementById('terms-modal');
+  const checkbox = document.getElementById('terms-agree-checkbox');
+  const acceptBtn = document.getElementById('terms-accept-btn');
+  const link = document.getElementById('terms-link');
+
+  if (!modal || !checkbox || !acceptBtn) return;
+
+  let isAccepted = false;
+  try {
+    isAccepted = localStorage.getItem(TERMS_KEY) === 'true';
+  } catch (_) {
+    isAccepted = false;
+  }
+
+  if (isAccepted) {
+    modal.hidden = true;
+    return;
+  }
+
+  modal.hidden = false;
+  document.documentElement.style.overflow = 'hidden';
+
+  checkbox.addEventListener('change', () => {
+    acceptBtn.disabled = !checkbox.checked;
+  });
+
+  // Если на ПК в pywebview ссылка пытается открыться внутри самого окна —
+  // можно открыть её во внешнем браузере через pywebview API (если добавишь метод)
+  if (link) {
+    link.addEventListener('click', (e) => {
+      if (window.pywebview && window.pywebview.api && typeof window.pywebview.api.open_external_url === 'function') {
+        e.preventDefault();
+        window.pywebview.api.open_external_url(link.href);
+      }
+    });
+  }
+
+  acceptBtn.addEventListener('click', () => {
+    if (!checkbox.checked) return;
+
+    try {
+      localStorage.setItem(TERMS_KEY, 'true');
+    } catch (_) {}
+
+    modal.hidden = true;
+    document.documentElement.style.overflow = '';
   });
 })();
 </script>
