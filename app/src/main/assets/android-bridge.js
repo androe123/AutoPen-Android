@@ -105,6 +105,11 @@
 
   // ---------- Для кнопки «Назад» ----------
   window.__autopenBackState = function () {
+    var aiModal = document.getElementById('aiSettingsModal');
+    if (aiModal && aiModal.classList.contains('show')) {
+      aiModal.classList.remove('show');
+      return 'modal';
+    }
     var modal = document.getElementById('updateModal');
     if (modal && modal.classList.contains('show')) {
       modal.classList.remove('show');

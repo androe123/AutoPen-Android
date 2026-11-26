@@ -40,7 +40,8 @@ button, label.s-btn, a.s-btn, select { touch-action: manipulation; }
   .save-cta { flex: 1.4; padding: 10px 12px; }
   .action-tile.reset { flex: 1; width: auto; padding: 9px 8px; white-space: nowrap; font-size: 12px; }
 
-  .main-pane { padding: 14px 12px 90px; }
+  .main-pane { padding: 14px 12px 90px; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+  .pages-stream, .page-card { touch-action: pan-y; }
   .pane-header { margin-bottom: 14px; align-items: stretch; }
   .pane-header h2 { font-size: 19px; }
   .primary-pill-btn { width: 100%; justify-content: center; padding: 10px 14px; }

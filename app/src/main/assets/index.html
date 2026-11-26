@@ -509,7 +509,8 @@
   }
   .page-card.selected-card { outline: 2px solid var(--accent); }
 
-  .canvas-wrap { position: relative; width: 100%; user-select: none; touch-action: none; background: #fff; }
+  .canvas-wrap { position: relative; width: 100%; user-select: none; touch-action: pan-y; background: #fff; }
+  .canvas-wrap.calib-active { touch-action: none; }
   .page-card canvas { width: 100%; display: block; }
 
   .crop-box {
@@ -669,6 +670,31 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+  .ai-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(5, 8, 20, 0.74);
+    display: none; align-items: center; justify-content: center; z-index: 1100; padding: 16px;
+    backdrop-filter: blur(3px);
+  }
+  .ai-modal-backdrop.show { display: flex; }
+  .ai-modal {
+    width: 100%; max-width: 480px; background: var(--bg-card); border: 1px solid var(--border-strong);
+    border-radius: 14px; padding: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .ai-modal h3 { margin: 0; font-size: 17px; }
+  .ai-modal p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.45; }
+  .ai-field { display: flex; flex-direction: column; gap: 4px; }
+  .ai-field label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .ai-field input, .ai-field select {
+    width: 100%; padding: 9px 10px; font-size: 13px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-app); color: var(--text);
+  }
+  .ai-status-txt { font-size: 12.5px; color: var(--text-muted); min-height: 18px; }
+  .export-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .export-controls select { width: auto; min-width: 195px; }
+
 </style>
 <link rel="stylesheet" href="mobile.css">
 </head>
@@ -767,7 +793,11 @@
           <h2 id="paneTitle">Превью конспекта</h2>
           <p id="paneSubtitle">Настраивайте параметры и скачивайте готовые листы в PDF или PNG</p>
         </div>
-        <button type="button" class="primary-pill-btn" id="fixTextBtn">✨ Исправить ошибки и абзацы</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button type="button" class="primary-pill-btn" id="fixTextBtn">✨ Исправить текст</button>
+          <button type="button" class="icon-btn" id="openAiSettingsBtn" title="Настройки нейросети (API-ключ)">🤖 API ИИ</button>
+          <button type="button" class="icon-btn" id="undoTextFixBtn" style="display:none" title="Вернуть текст до исправления">↩ Откатить</button>
+        </div>
       </div>
 
       <div class="cards-grid" id="cardsGrid">
@@ -907,11 +937,16 @@
           <div class="card-head">
             <div class="card-head-left">
               <div class="card-title-txt">Сохранение файла</div>
-              <div class="card-sub-txt">Единый PDF-файл или отдельные PNG-изображения страниц</div>
+              <div class="card-sub-txt">Выберите нужный формат файла для экспорта конспекта</div>
             </div>
-            <div class="btn-row" style="margin:0">
-              <button type="button" class="s-btn accent" id="btnPdf">Скачать PDF</button>
-              <button type="button" class="s-btn" id="downloadAll">Все страницы (PNG)</button>
+            <div class="export-controls">
+              <select id="exportFormatSelect" aria-label="Формат сохранения">
+                <option value="pdf">PDF-документ (.pdf — все листы)</option>
+                <option value="png">Изображения PNG (.png — все листы)</option>
+                <option value="jpg">Изображения JPG (.jpg — все листы)</option>
+                <option value="txt">Текст конспекта (.txt)</option>
+              </select>
+              <button type="button" class="s-btn accent" id="btnExportChosen">⬇ Скачать файл</button>
             </div>
           </div>
         </div>
@@ -936,6 +971,48 @@
   </div>
 </div>
 
+
+<div class="ai-modal-backdrop" id="aiSettingsModal">
+  <div class="ai-modal">
+    <h3>🤖 Настройка нейросети для проверки текста</h3>
+    <p>Укажите API-ключ для нейросети. Если ключ не задан, кнопка «Исправить текст» бесплатно проверяет текст через Яндекс Спеллер (без ключа) или встроенным офлайн-корректором.</p>
+
+    <div class="ai-field">
+      <label for="aiProviderPreset">Провайдер (быстрый выбор)</label>
+      <select id="aiProviderPreset">
+        <option value="openai">OpenAI (gpt-4o-mini)</option>
+        <option value="openrouter">OpenRouter (openai/gpt-4o-mini)</option>
+        <option value="deepseek">DeepSeek (deepseek-chat)</option>
+        <option value="groq">Groq (llama-3.3-70b-versatile)</option>
+        <option value="custom">Свой OpenAI-совместимый Endpoint</option>
+      </select>
+    </div>
+
+    <div class="ai-field">
+      <label for="aiApiKeyInput">API-ключ</label>
+      <input type="password" id="aiApiKeyInput" placeholder="sk-..." autocomplete="off">
+    </div>
+
+    <div class="ai-field">
+      <label for="aiApiUrlInput">Endpoint URL</label>
+      <input type="text" id="aiApiUrlInput" value="https://api.openai.com/v1/chat/completions">
+    </div>
+
+    <div class="ai-field">
+      <label for="aiModelInput">Модель</label>
+      <input type="text" id="aiModelInput" value="gpt-4o-mini">
+    </div>
+
+    <div class="ai-status-txt" id="aiModalStatus"></div>
+
+    <div class="btn-row" style="justify-content:flex-end;margin-top:4px">
+      <button type="button" class="s-btn" id="clearAiSettingsBtn">Очистить ключ</button>
+      <button type="button" class="s-btn" id="closeAiSettingsBtn">Закрыть</button>
+      <button type="button" class="s-btn accent" id="saveAiSettingsBtn">Сохранить настройки ИИ</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast">Обновление актуально</div>
 
 <script>
@@ -943,7 +1020,7 @@ const GITHUB_REPO_URL = 'https://github.com/androe123/AutoPen-Android';
 const REMOTE_MANIFEST_URL = 'https://raw.githubusercontent.com/androe123/AutoPen-Android/main/version.json';
 const AVAILABLE_VERSIONS = ['v1.2.0', 'v1.2.1', 'v1.3.0'];
 
-let APP_VERSION = localStorage.getItem('hw_selected_version') || 'v1.2.3';
+let APP_VERSION = localStorage.getItem('hw_selected_version') || 'v1.2.4';
 
 let updateStatus = {
   hasUpdate: false,
@@ -1032,7 +1109,7 @@ function isNewerVersion(latest, current) {
   return false;
 }
 
-async function checkForCodeUpdates(showDialogIfFound = true) {
+async function checkForCodeUpdates(showDialogIfFound = true, notifyIfActual = true) {
   updateStatus.checkedAt = new Date().toLocaleTimeString();
   let found = false;
   let remoteVer = APP_VERSION;
@@ -1062,7 +1139,7 @@ async function checkForCodeUpdates(showDialogIfFound = true) {
 
   if (found && showDialogIfFound) {
     openUpdateDialog({ found: true, version: remoteVer, notes: remoteNotes, url: remoteUrl });
-  } else {
+  } else if (!found && notifyIfActual) {
     showCornerNotice('Обновление актуально', false);
   }
 
@@ -2018,7 +2095,7 @@ async function renderCalibMode(token) {
       wrap.className = 'page-card' + (state.activeId === photo.id ? ' selected-card' : '');
       wrap.dataset.photoId = photo.id;
 
-      const canvasWrap = document.createElement('div'); canvasWrap.className = 'canvas-wrap';
+      const canvasWrap = document.createElement('div'); canvasWrap.className = 'canvas-wrap calib-active';
       const canvas = document.createElement('canvas'); canvasWrap.appendChild(canvas);
 
       const redrawCanvasOnly = () => {
@@ -2069,18 +2146,46 @@ async function renderView() {
   else await renderPreviewMode(token);
 }
 
-async function downloadPage(idx) {
+function triggerFileDownload(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function downloadPage(idx, ext = 'png') {
   await ensureFont();
   const pages = layoutAllPages(); const pageData = pages[idx]; if (!pageData) return;
   const c = document.createElement('canvas'); drawPage(c, pageData, idx, false);
-  const a = document.createElement('a'); a.href = c.toDataURL('image/png');
-  a.download = `konspekt_${idx + 1}.png`; a.click();
+  const isJpg = ext === 'jpg' || ext === 'jpeg';
+  const mime = isJpg ? 'image/jpeg' : 'image/png';
+  const url = isJpg ? c.toDataURL(mime, 0.92) : c.toDataURL(mime);
+  triggerFileDownload(url, `konspekt_${idx + 1}.${isJpg ? 'jpg' : 'png'}`);
 }
 
-async function downloadAll() {
+async function downloadAll(ext = 'png') {
   await ensureFont();
   const pages = layoutAllPages();
-  for (let i = 0; i < pages.length; i++) { await downloadPage(i); await new Promise(r => setTimeout(r, 250)); }
+  if (!pages.length) return showCornerNotice('Нет страниц для экспорта', false);
+  for (let i = 0; i < pages.length; i++) {
+    await downloadPage(i, ext);
+    await new Promise(r => setTimeout(r, 300));
+  }
+  showCornerNotice(`Сохранено страниц: ${pages.length} (${ext.toUpperCase()}) ✔`, false);
+}
+
+async function exportTxt() {
+  const content = state.text || '';
+  if (!content.trim()) return showCornerNotice('Текст конспекта пуст', false);
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const reader = new FileReader();
+  reader.onload = () => {
+    triggerFileDownload(reader.result, 'konspekt.txt');
+    showCornerNotice('TXT сохранён ✔', false);
+  };
+  reader.readAsDataURL(blob);
 }
 
 async function exportPdf() {
@@ -2098,6 +2203,14 @@ async function exportPdf() {
   }
   doc.save('konspekt.pdf');
   showCornerNotice('PDF готов ✔', false);
+}
+
+async function exportSelectedFormat() {
+  const fmt = ($('exportFormatSelect')?.value || 'pdf').toLowerCase();
+  if (fmt === 'pdf') return exportPdf();
+  if (fmt === 'png') return downloadAll('png');
+  if (fmt === 'jpg') return downloadAll('jpg');
+  if (fmt === 'txt') return exportTxt();
 }
 
 function bindEvents() {
@@ -2195,8 +2308,7 @@ function bindEvents() {
   $('filesRight').addEventListener('change', e => handlePhotoUpload(e.target, 'right', photosRight));
 
   $('btnSave').onclick = () => saveNow();
-  $('downloadAll').onclick = downloadAll;
-  $('btnPdf').onclick = exportPdf;
+  if ($('btnExportChosen')) $('btnExportChosen').onclick = exportSelectedFormat;
 
   $('resetAll').onclick = async () => {
     const keptPhotoConfigs = JSON.parse(JSON.stringify(state.photoConfigs || {}));
@@ -2277,22 +2389,7 @@ function bindEvents() {
   await renderView();
   document.fonts.ready.then(renderView);
 
-  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const LAST_CHECK_KEY = 'hw_last_update_check_ts';
-
-  async function maybeCheckUpdatesDaily(force = false) {
-    const lastTs = parseInt(localStorage.getItem(LAST_CHECK_KEY) || '0', 10);
-    const now = Date.now();
-    if (!force && lastTs && (now - lastTs) < ONE_DAY_MS) {
-      syncUpdateUI();
-      return;
-    }
-    localStorage.setItem(LAST_CHECK_KEY, String(now));
-    await checkForCodeUpdates(true);
-  }
-
-  await maybeCheckUpdatesDaily(false);
-  setInterval(() => maybeCheckUpdatesDaily(false), ONE_DAY_MS);
+  await checkForCodeUpdates(true, false);
 })();
 </script>
 
@@ -2383,12 +2480,228 @@ function bindEvents() {
     }).filter(Boolean).join('\n\n');
   }
 
-  fixBtn.addEventListener('click', function () {
+  const AI_KEY_STORAGE = 'autopen_ai_api_key_v1';
+  const AI_URL_STORAGE = 'autopen_ai_api_url_v1';
+  const AI_MODEL_STORAGE = 'autopen_ai_model_v1';
+  const AI_PRESET_STORAGE = 'autopen_ai_preset_v1';
+
+  const PRESETS = {
+    openai: { url: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o-mini' },
+    openrouter: { url: 'https://openrouter.ai/api/v1/chat/completions', model: 'openai/gpt-4o-mini' },
+    deepseek: { url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat' },
+    groq: { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama-3.3-70b-versatile' }
+  };
+
+  const aiModal = document.getElementById('aiSettingsModal');
+  const openAiBtn = document.getElementById('openAiSettingsBtn');
+  const closeAiBtn = document.getElementById('closeAiSettingsBtn');
+  const saveAiBtn = document.getElementById('saveAiSettingsBtn');
+  const clearAiBtn = document.getElementById('clearAiSettingsBtn');
+  const presetSel = document.getElementById('aiProviderPreset');
+  const keyInp = document.getElementById('aiApiKeyInput');
+  const urlInp = document.getElementById('aiApiUrlInput');
+  const modelInp = document.getElementById('aiModelInput');
+  const aiStatus = document.getElementById('aiModalStatus');
+  const undoBtn = document.getElementById('undoTextFixBtn');
+
+  let lastTextBeforeFix = null;
+
+  function loadAiConfigToUI() {
+    if (!keyInp) return;
+    keyInp.value = localStorage.getItem(AI_KEY_STORAGE) || '';
+    urlInp.value = localStorage.getItem(AI_URL_STORAGE) || PRESETS.openai.url;
+    modelInp.value = localStorage.getItem(AI_MODEL_STORAGE) || PRESETS.openai.model;
+    if (presetSel) presetSel.value = localStorage.getItem(AI_PRESET_STORAGE) || 'openai';
+    if (aiStatus) aiStatus.textContent = keyInp.value ? 'Ключ сохранён локально ✔' : 'Ключ не задан (будет работать офлайн-режим)';
+  }
+
+  if (presetSel) {
+    presetSel.addEventListener('change', () => {
+      const p = PRESETS[presetSel.value];
+      if (p) {
+        urlInp.value = p.url;
+        modelInp.value = p.model;
+      }
+    });
+  }
+
+  if (openAiBtn && aiModal) {
+    openAiBtn.addEventListener('click', () => {
+      loadAiConfigToUI();
+      aiModal.classList.add('show');
+    });
+  }
+  if (closeAiBtn && aiModal) {
+    closeAiBtn.addEventListener('click', () => aiModal.classList.remove('show'));
+  }
+  if (aiModal) {
+    aiModal.addEventListener('click', (e) => {
+      if (e.target === aiModal) aiModal.classList.remove('show');
+    });
+  }
+  if (saveAiBtn) {
+    saveAiBtn.addEventListener('click', () => {
+      localStorage.setItem(AI_KEY_STORAGE, keyInp.value.trim());
+      localStorage.setItem(AI_URL_STORAGE, urlInp.value.trim() || PRESETS.openai.url);
+      localStorage.setItem(AI_MODEL_STORAGE, modelInp.value.trim() || PRESETS.openai.model);
+      if (presetSel) localStorage.setItem(AI_PRESET_STORAGE, presetSel.value);
+      aiStatus.textContent = 'Настройки ИИ сохранены ✔';
+      showCornerNotice('Настройки ИИ сохранены ✔', false);
+      setTimeout(() => aiModal.classList.remove('show'), 450);
+    });
+  }
+  if (clearAiBtn) {
+    clearAiBtn.addEventListener('click', () => {
+      localStorage.removeItem(AI_KEY_STORAGE);
+      keyInp.value = '';
+      aiStatus.textContent = 'API-ключ удалён';
+    });
+  }
+
+  if (undoBtn) {
+    undoBtn.addEventListener('click', () => {
+      if (lastTextBeforeFix !== null) {
+        textarea.value = lastTextBeforeFix;
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        undoBtn.style.display = 'none';
+        markDirty();
+        showCornerNotice('Текст восстановлен ↩', false);
+      }
+    });
+  }
+
+  async function fixTextWithAI(rawText, apiKey, apiUrl, model) {
+    const res = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content: 'Ты корректор учебных конспектов. Исправь орфографические, пунктуационные и грамматические ошибки, опечатки и слипшиеся слова. Разбей текст на аккуратные логичные абзацы (пустая строка = новый абзац). Сохрани смысл, термины и стиль автора. Верни ТОЛЬКО исправленный текст без вступлений, комментариев и markdown-разметки.'
+          },
+          { role: 'user', content: rawText }
+        ]
+      })
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(`Ошибка API (${res.status}): ${errBody.slice(0, 120)}`);
+    }
+    const json = await res.json();
+    const out = json?.choices?.[0]?.message?.content?.trim();
+    if (!out) throw new Error('Нейросеть вернула пустой ответ');
+    return out;
+  }
+
+  fixBtn.addEventListener('click', async function () {
     const raw = textarea.value;
     if (!raw.trim()) { showCornerNotice('⚠ Сначала введите текст конспекта', false); return; }
-    textarea.value = applyLocalGrammarAndOrthography(raw);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    markDirty();
+
+    const apiKey = (localStorage.getItem(AI_KEY_STORAGE) || '').trim();
+    const apiUrl = (localStorage.getItem(AI_URL_STORAGE) || PRESETS.openai.url).trim();
+    const model = (localStorage.getItem(AI_MODEL_STORAGE) || PRESETS.openai.model).trim();
+
+    lastTextBeforeFix = raw;
+
+    async function fixTextWithYandexSpeller(text) {
+      const MAX_CHUNK = 9000;
+      const chunks = [];
+      let cursor = 0;
+
+      while (cursor < text.length) {
+        let end = Math.min(cursor + MAX_CHUNK, text.length);
+        if (end < text.length) {
+          const lastBreak = Math.max(
+            text.lastIndexOf('\n', end),
+            text.lastIndexOf(' ', end)
+          );
+          if (lastBreak > cursor) end = lastBreak + 1;
+        }
+        chunks.push(text.slice(cursor, end));
+        cursor = end;
+      }
+
+      const fixedChunks = [];
+      for (const chunk of chunks) {
+        const params = new URLSearchParams();
+        params.append('text', chunk);
+        params.append('lang', 'ru');
+        params.append('options', '4');
+
+        const res = await fetch('https://speller.yandex.net/services/spellservice.json/checkText', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: params.toString()
+        });
+        if (!res.ok) throw new Error('Yandex Speller HTTP ' + res.status);
+        const errors = await res.json();
+        if (!Array.isArray(errors) || !errors.length) {
+          fixedChunks.push(chunk);
+          continue;
+        }
+
+        let part = chunk;
+        const sorted = [...errors].sort((a, b) => b.pos - a.pos);
+        for (const err of sorted) {
+          if (err.s && err.s.length > 0) {
+            part = part.slice(0, err.pos) + err.s[0] + part.slice(err.pos + err.len);
+          }
+        }
+        fixedChunks.push(part);
+      }
+
+      return fixedChunks.join('');
+    }
+
+    if (!apiKey) {
+      const origLabel = fixBtn.textContent;
+      fixBtn.disabled = true;
+      fixBtn.textContent = '⏳ Проверяем текст...';
+      showCornerNotice('Проверяю орфографию и пунктуацию...', true);
+      try {
+        const spellerFixed = await fixTextWithYandexSpeller(raw);
+        textarea.value = applyLocalGrammarAndOrthography(spellerFixed);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        if (undoBtn) undoBtn.style.display = 'inline-flex';
+        markDirty();
+        showCornerNotice('Текст исправлен (Яндекс Спеллер + автоформат) ✨', false);
+      } catch (e) {
+        textarea.value = applyLocalGrammarAndOrthography(raw);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        if (undoBtn) undoBtn.style.display = 'inline-flex';
+        markDirty();
+        showCornerNotice('Исправлено встроенным офлайн-корректором ✔', false);
+      } finally {
+        fixBtn.disabled = false;
+        fixBtn.textContent = origLabel;
+      }
+      return;
+    }
+
+    const origLabel = fixBtn.textContent;
+    fixBtn.disabled = true;
+    fixBtn.textContent = '⏳ Нейросеть проверяет...';
+    showCornerNotice('Отправляю текст нейросети...', true);
+
+    try {
+      const fixed = await fixTextWithAI(raw, apiKey, apiUrl, model);
+      textarea.value = fixed;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      if (undoBtn) undoBtn.style.display = 'inline-flex';
+      markDirty();
+      showCornerNotice('Текст исправлен нейросетью ✨', false);
+    } catch (err) {
+      showCornerNotice('⚠ ' + (err.message || 'Ошибка нейросети'), false);
+    } finally {
+      fixBtn.disabled = false;
+      fixBtn.textContent = origLabel;
+    }
   });
 })();
 (function initTermsGate() {
